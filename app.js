@@ -1,4 +1,4 @@
-const API_BASE = "BURAYA_APPS_SCRIPT_EXEC_URL";
+const API_BASE = "https://script.google.com/macros/s/AKfycbyBmT4GrkMfU0sF_oIPkXMEWvLBgv3C__kg18R2Ji-Hgq3xdx_8Z-435ZTV4H9dd8rJ/exec";
 
 const $ = (id) => document.getElementById(id);
 
@@ -115,7 +115,7 @@ function fillCriteria(criteria) {
 }
 
 async function apiGet(params) {
-  if (!API_BASE || API_BASE.includes("https://script.google.com/macros/s/AKfycbyBmT4GrkMfU0sF_oIPkXMEWvLBgv3C__kg18R2Ji-Hgq3xdx_8Z-435ZTV4H9dd8rJ/exec")) {
+  if (!API_BASE || API_BASE.includes("BURAYA_APPS_SCRIPT_EXEC_URL")) {
     throw new Error("API_BASE alanına Apps Script exec URL yazılmamış.");
   }
 
