@@ -1,50 +1,18 @@
-const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyBmT4GrkMfU0sF_oIPkXMEWvLBgv3C__kg18R2Ji-Hgq3xdx_8Z-435ZTV4H9dd8rJ/exec";
+const APPS_SCRIPT_URL = "BURAYA_APPS_SCRIPT_EXEC_LINKINI_YAPISTIR";
+const LOW_SCORE_THRESHOLD = 2;
 
 const $ = (id) => document.getElementById(id);
 
-const APP_STATE = {
-  employees: [],
-  criteria: [],
-  records: [],
-  reviewQueue: [],
-  currentUser: {
-    fullName: "Tarayıcı Demo",
-    username: "@demo",
-    userId: 0,
-    source: "Tarayıcı testi / Telegram dışı açılış"
+const state = {
+  tg: null,
+  user: null,
+  data: {
+    employees: [],
+    criteria: [],
+    records: [],
+    reviewQueue: []
   }
 };
-
-function escapeHtml(value) {
-  return String(value ?? "")
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
-}
-
-function todayIso() {
-  const d = new Date();
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${y}-${m}-${day}`;
-}
-
-function formatDateTR(iso) {
-  if (!iso) return "-";
-  const parts = String(iso).split("-");
-  if (parts.length === 3) {
-    return `${parts[2]}.${parts[1]}.${parts[0]}`;
-  }
-  return String(iso);
-}
-
-function formatDateTimeTR(text) {
-  if (!text) return "-";
-  return String(text).replace(" ", " / ");
-}
 
 function switchTab(tabId) {
   document.querySelectorAll(".tab").forEach((btn) => {
@@ -64,20 +32,52 @@ function setupTabs() {
 
 function setToday() {
   const input = $("scoreDate");
-  if (input) input.value = todayIso();
+  if (!input) return;
+
+  const d = new Date();
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+
+  input.value = `${yyyy}-${mm}-${dd}`;
 }
 
-function initTelegramInfo() {
-  const tg = window.Telegram?.WebApp;
+function todayYmd() {
+  const d = new Date();
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}`;
+}
+
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+}
+
+function setStatus(message) {
+  if ($("statusText")) {
+    $("statusText").textContent = message;
+  }
+}
+
+function setUserVisuals() {
+  const tg = window.Telegram?.WebApp || null;
+  state.tg = tg;
 
   if (tg) {
     try {
       tg.ready();
       tg.expand();
-    } catch (err) {}
+    } catch (_) {}
   }
 
   const user = tg?.initDataUnsafe?.user || null;
+  state.user = user;
 
   const fullName = user
     ? [user.first_name, user.last_name].filter(Boolean).join(" ").trim()
@@ -85,410 +85,410 @@ function initTelegramInfo() {
 
   const username = user?.username ? `@${user.username}` : "@demo";
   const userId = user?.id || 0;
-  const source = user ? "Telegram Mini App" : "Tarayıcı testi / Telegram dışı açılış";
 
-  APP_STATE.currentUser = {
-    fullName,
-    username,
-    userId,
-    source
-  };
-
-  $("userChip").textContent = fullName;
+  $("userChip").textContent = fullName || "Kullanıcı";
   $("userInfo").textContent = `Kullanıcı: ${fullName} | ${username} | ID: ${userId}`;
-  $("sourceInfo").textContent = `Kaynak: ${source}`;
-  $("statusText").textContent = user
-    ? "Telegram kullanıcı bilgisi başarıyla alındı."
-    : "Telegram dışı açılış. Bu normal.";
+  $("sourceInfo").textContent = user
+    ? "Kaynak: Telegram Mini App"
+    : "Kaynak: Tarayıcı testi / Telegram dışı açılış";
 }
 
-function setStatus(message, isError = false) {
-  const el = $("statusText");
-  el.textContent = message;
-  el.classList.toggle("status-error", isError);
-}
+function getTelegramPayload() {
+  const user = state.user || null;
 
-async function fetchBootstrap() {
-  if (!WEB_APP_URL || WEB_APP_URL.includes("BURAYA_APPS_SCRIPT")) {
-    throw new Error("WEB_APP_URL alanına Apps Script /exec linki girilmemiş.");
-  }
+  const fullName = user
+    ? [user.first_name, user.last_name].filter(Boolean).join(" ").trim()
+    : "Tarayıcı Demo";
 
-  const url = `${WEB_APP_URL}?action=getBootstrap&_=${Date.now()}`;
-  const response = await fetch(url, {
-    method: "GET"
-  });
-
-  const data = await response.json();
-
-  if (!data.ok) {
-    throw new Error(data.error || "Bootstrap verisi alınamadı.");
-  }
-
-  return data.data || {
-    employees: [],
-    criteria: [],
-    records: [],
-    reviewQueue: []
+  return {
+    telegramUserId: user?.id || 0,
+    telegramUsername: user?.username ? `@${user.username}` : "@demo",
+    fullName
   };
 }
 
-async function saveRecord(payload) {
-  if (!WEB_APP_URL || WEB_APP_URL.includes("BURAYA_APPS_SCRIPT")) {
-    throw new Error("WEB_APP_URL alanına Apps Script /exec linki girilmemiş.");
-  }
+function normalizeApiData(data) {
+  return {
+    employees: Array.isArray(data?.employees) ? data.employees : [],
+    criteria: Array.isArray(data?.criteria) ? data.criteria : [],
+    records: Array.isArray(data?.records) ? data.records : [],
+    reviewQueue: Array.isArray(data?.reviewQueue) ? data.reviewQueue : []
+  };
+}
 
-  const response = await fetch(WEB_APP_URL, {
-    method: "POST",
-    headers: {
-      "Content-Type": "text/plain;charset=utf-8"
-    },
-    body: JSON.stringify({
-      action: "saveScore",
-      ...payload
-    })
+function uniqueEmployees(employees) {
+  const map = new Map();
+
+  employees.forEach((item) => {
+    const name = String(item?.name || "").trim();
+    if (!name) return;
+
+    if (!map.has(name)) {
+      map.set(name, {
+        name,
+        role: String(item?.role || "Belirtilmedi").trim() || "Belirtilmedi",
+        active: item?.active !== false
+      });
+    }
   });
 
-  const data = await response.json();
-
-  if (!data.ok) {
-    throw new Error(data.error || "Kayıt kaydedilemedi.");
-  }
-
-  return data;
+  return [...map.values()].sort((a, b) => a.name.localeCompare(b.name, "tr"));
 }
 
-function normalizeEmployees(rawEmployees) {
-  return (rawEmployees || [])
-    .filter((item) => item && item.name)
-    .map((item) => ({
-      name: String(item.name).trim(),
-      role: String(item.role || "Belirtilmedi").trim() || "Belirtilmedi",
-      active: item.active !== false
-    }));
-}
-
-function normalizeCriteria(rawCriteria) {
-  return (rawCriteria || [])
-    .map((item) => String(item || "").trim())
+function uniqueCriteria(criteria) {
+  const list = criteria
+    .map((x) => String(x || "").trim())
     .filter(Boolean);
+
+  return [...new Set(list)];
 }
 
-function normalizeRecords(rawRecords) {
-  return (rawRecords || [])
-    .filter((item) => item && item.employeeName)
-    .map((item) => ({
-      createdAt: item.createdAt || "",
-      date: item.date || "",
-      employeeName: String(item.employeeName || "").trim(),
-      criteria: String(item.criteria || "").trim(),
-      score: Number(item.score || 0),
-      note: String(item.note || "").trim(),
-      telegramUserId: String(item.telegramUserId || "").trim(),
-      telegramUsername: String(item.telegramUsername || "").trim(),
-      fullName: String(item.fullName || "").trim(),
-      review: Boolean(item.review)
-    }));
-}
-
-function hydrateState(data) {
-  APP_STATE.employees = normalizeEmployees(data.employees);
-  APP_STATE.criteria = normalizeCriteria(data.criteria);
-  APP_STATE.records = normalizeRecords(data.records);
-  APP_STATE.reviewQueue = Array.isArray(data.reviewQueue)
-    ? data.reviewQueue
-    : APP_STATE.records.filter((r) => Number(r.score) <= 2);
-}
-
-function populateEmployeeSelect() {
+function fillEmployeeSelect() {
   const select = $("employeeSelect");
+  if (!select) return;
+
+  const current = select.value;
+  const employees = uniqueEmployees(state.data.employees);
+
   select.innerHTML = `<option value="">Çalışan seç</option>`;
 
-  APP_STATE.employees
-    .filter((emp) => emp.active)
-    .sort((a, b) => a.name.localeCompare(b.name, "tr"))
-    .forEach((emp) => {
-      const opt = document.createElement("option");
-      opt.value = emp.name;
-      opt.textContent = emp.name;
-      select.appendChild(opt);
-    });
-}
-
-function populateCriteriaSelect() {
-  const select = $("criteriaSelect");
-  select.innerHTML = `<option value="">Kriter seç</option>`;
-
-  APP_STATE.criteria.forEach((criterion) => {
+  employees.forEach((emp) => {
     const opt = document.createElement("option");
-    opt.value = criterion;
-    opt.textContent = criterion;
+    opt.value = emp.name;
+    opt.textContent = emp.name;
     select.appendChild(opt);
   });
+
+  if (employees.some((e) => e.name === current)) {
+    select.value = current;
+  }
+}
+
+function fillCriteriaSelect() {
+  const select = $("criteriaSelect");
+  if (!select) return;
+
+  const current = select.value;
+  const criteria = uniqueCriteria(state.data.criteria);
+
+  select.innerHTML = `<option value="">Kriter seç</option>`;
+
+  criteria.forEach((item) => {
+    const opt = document.createElement("option");
+    opt.value = item;
+    opt.textContent = item;
+    select.appendChild(opt);
+  });
+
+  if (criteria.includes(current)) {
+    select.value = current;
+  }
 }
 
 function updateStats() {
-  const activeEmployees = APP_STATE.employees.filter((emp) => emp.active).length;
-  const today = todayIso();
-  const todayCount = APP_STATE.records.filter((r) => r.date === today).length;
-  const lowScoreCount = APP_STATE.records.filter((r) => Number(r.score) <= 2).length;
+  const employees = uniqueEmployees(state.data.employees);
+  const records = state.data.records || [];
+  const reviewQueue = state.data.reviewQueue || [];
+  const today = todayYmd();
 
-  $("activeCount").textContent = String(activeEmployees);
+  const activeCount = employees.filter((e) => e.active !== false).length;
+  const todayCount = records.filter((r) => String(r.date || "").trim() === today).length;
+  const lowCount = reviewQueue.length || records.filter((r) => Number(r.score || 0) <= LOW_SCORE_THRESHOLD).length;
+
+  $("activeCount").textContent = String(activeCount);
   $("todayCount").textContent = String(todayCount);
-  $("lowScoreCount").textContent = String(lowScoreCount);
-}
-
-function getEmployeeStatsMap() {
-  const map = {};
-
-  APP_STATE.employees.forEach((emp) => {
-    map[emp.name] = {
-      name: emp.name,
-      role: emp.role,
-      active: emp.active,
-      total: 0,
-      low: 0,
-      sum: 0,
-      avg: 0
-    };
-  });
-
-  APP_STATE.records.forEach((rec) => {
-    if (!map[rec.employeeName]) {
-      map[rec.employeeName] = {
-        name: rec.employeeName,
-        role: "Belirtilmedi",
-        active: true,
-        total: 0,
-        low: 0,
-        sum: 0,
-        avg: 0
-      };
-    }
-
-    map[rec.employeeName].total += 1;
-    map[rec.employeeName].sum += Number(rec.score || 0);
-
-    if (Number(rec.score) <= 2) {
-      map[rec.employeeName].low += 1;
-    }
-  });
-
-  Object.values(map).forEach((item) => {
-    item.avg = item.total ? (item.sum / item.total).toFixed(2) : "0.00";
-  });
-
-  return map;
+  $("lowScoreCount").textContent = String(lowCount);
 }
 
 function renderEmployees() {
-  const box = $("employeeList");
-  const pill = $("employeeCountPill");
-  const map = getEmployeeStatsMap();
-  const list = Object.values(map).sort((a, b) => a.name.localeCompare(b.name, "tr"));
+  const section = $("employees");
+  if (!section) return;
 
-  pill.textContent = `${list.length} kişi`;
+  const employees = uniqueEmployees(state.data.employees);
 
-  if (!list.length) {
-    box.innerHTML = `<div class="empty-state">Henüz çalışan verisi bulunamadı.</div>`;
-    return;
-  }
-
-  box.innerHTML = list
-    .map((emp) => {
-      const statusClass = emp.active ? "badge-green" : "badge-red";
-      const statusText = emp.active ? "Aktif" : "Pasif";
-
-      return `
-        <div class="employee-card">
-          <div class="employee-top">
-            <div>
-              <div class="employee-name">${escapeHtml(emp.name)}</div>
-              <div class="employee-role">${escapeHtml(emp.role)}</div>
-            </div>
-            <div class="badge ${statusClass}">${statusText}</div>
-          </div>
-
-          <div class="employee-stats">
-            <div class="mini-stat">
-              <span>Kayıt</span>
-              <strong>${emp.total}</strong>
-            </div>
-            <div class="mini-stat">
-              <span>Ort.</span>
-              <strong>${emp.avg}</strong>
-            </div>
-            <div class="mini-stat">
-              <span>Düşük</span>
-              <strong>${emp.low}</strong>
-            </div>
-          </div>
-        </div>
-      `;
-    })
-    .join("");
-}
-
-function renderReports() {
-  const summary = $("reportSummary");
-  const tbody = $("recentRecordsBody");
-  const pill = $("reportCountPill");
-
-  const total = APP_STATE.records.length;
-  const today = todayIso();
-  const todayTotal = APP_STATE.records.filter((r) => r.date === today).length;
-  const lowTotal = APP_STATE.records.filter((r) => Number(r.score) <= 2).length;
-  const avgScore = total
-    ? (
-        APP_STATE.records.reduce((acc, item) => acc + Number(item.score || 0), 0) / total
-      ).toFixed(2)
-    : "0.00";
-
-  pill.textContent = `${total} kayıt`;
-
-  summary.innerHTML = `
-    <div class="summary-card">
-      <div class="summary-label">Toplam kayıt</div>
-      <div class="summary-value">${total}</div>
-    </div>
-    <div class="summary-card">
-      <div class="summary-label">Ortalama puan</div>
-      <div class="summary-value">${avgScore}</div>
-    </div>
-    <div class="summary-card">
-      <div class="summary-label">Bugünkü kayıt</div>
-      <div class="summary-value">${todayTotal}</div>
-    </div>
-    <div class="summary-card">
-      <div class="summary-label">İnceleme kuyruğu</div>
-      <div class="summary-value">${lowTotal}</div>
-    </div>
-  `;
-
-  const recent = [...APP_STATE.records].reverse().slice(0, 15);
-
-  if (!recent.length) {
-    tbody.innerHTML = `
-      <tr>
-        <td colspan="6" class="empty-td">Henüz kayıt yok.</td>
-      </tr>
+  if (!employees.length) {
+    section.innerHTML = `
+      <h2>Çalışanlar</h2>
+      <p>Henüz çalışan bulunamadı. Google Sheet içindeki <strong>Personel</strong> sayfasına personel ekle.</p>
     `;
     return;
   }
 
-  tbody.innerHTML = recent
-    .map((rec) => {
-      const scoreClass = Number(rec.score) <= 2 ? "score-bad" : "score-good";
+  const rows = employees
+    .map((emp, index) => {
       return `
-        <tr>
-          <td>${escapeHtml(formatDateTR(rec.date))}</td>
-          <td>${escapeHtml(rec.employeeName)}</td>
-          <td>${escapeHtml(rec.criteria)}</td>
-          <td><span class="score-pill ${scoreClass}">${escapeHtml(rec.score)}</span></td>
-          <td>${escapeHtml(rec.note || "-")}</td>
-          <td>${escapeHtml(rec.fullName || rec.telegramUsername || "-")}</td>
-        </tr>
+        <div style="
+          border:1px solid rgba(120,170,255,.22);
+          border-radius:18px;
+          padding:16px;
+          background:rgba(255,255,255,.03);
+        ">
+          <div style="font-size:12px;opacity:.7;margin-bottom:8px;">#${index + 1}</div>
+          <div style="font-size:20px;font-weight:800;margin-bottom:8px;">${escapeHtml(emp.name)}</div>
+          <div style="font-size:14px;opacity:.9;margin-bottom:6px;">Rol: ${escapeHtml(emp.role || "Belirtilmedi")}</div>
+          <div style="font-size:14px;opacity:.9;">Durum: ${emp.active ? "Aktif" : "Pasif"}</div>
+        </div>
       `;
     })
     .join("");
+
+  section.innerHTML = `
+    <h2>Çalışanlar</h2>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;">
+      ${rows}
+    </div>
+  `;
 }
 
-function collectFormData() {
-  return {
-    date: $("scoreDate").value,
-    employeeName: $("employeeSelect").value,
-    criteria: $("criteriaSelect").value,
-    score: $("scoreSelect").value,
-    note: $("noteInput").value.trim(),
-    telegramUserId: APP_STATE.currentUser.userId,
-    telegramUsername: APP_STATE.currentUser.username,
-    fullName: APP_STATE.currentUser.fullName
-  };
+function renderReports() {
+  const section = $("reports");
+  if (!section) return;
+
+  const records = [...(state.data.records || [])];
+  const reviewQueue = state.data.reviewQueue || [];
+  const today = todayYmd();
+
+  const totalCount = records.length;
+  const todayCount = records.filter((r) => String(r.date || "").trim() === today).length;
+  const reviewCount = reviewQueue.length || records.filter((r) => Number(r.score || 0) <= LOW_SCORE_THRESHOLD).length;
+
+  const recent = records
+    .slice()
+    .sort((a, b) => String(b.createdAt || "").localeCompare(String(a.createdAt || "")))
+    .slice(0, 10);
+
+  const recentHtml = recent.length
+    ? recent.map((r) => `
+        <div style="
+          border:1px solid rgba(120,170,255,.18);
+          border-radius:14px;
+          padding:12px;
+          background:rgba(255,255,255,.02);
+          margin-bottom:10px;
+        ">
+          <div style="font-weight:700;margin-bottom:6px;">${escapeHtml(r.employeeName)} — ${escapeHtml(r.criteria)}</div>
+          <div style="font-size:14px;opacity:.9;margin-bottom:4px;">Puan: ${escapeHtml(r.score)} | Tarih: ${escapeHtml(r.date || "-")}</div>
+          <div style="font-size:14px;opacity:.8;">Not: ${escapeHtml(r.note || "-")}</div>
+        </div>
+      `).join("")
+    : `<p>Henüz kayıt yok.</p>`;
+
+  section.innerHTML = `
+    <h2>Raporlar</h2>
+
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:18px;">
+      <div style="border:1px solid rgba(120,170,255,.22);border-radius:18px;padding:16px;background:rgba(255,255,255,.03);">
+        <div style="font-size:13px;opacity:.75;margin-bottom:8px;">Toplam kayıt</div>
+        <div style="font-size:36px;font-weight:900;">${totalCount}</div>
+      </div>
+
+      <div style="border:1px solid rgba(120,170,255,.22);border-radius:18px;padding:16px;background:rgba(255,255,255,.03);">
+        <div style="font-size:13px;opacity:.75;margin-bottom:8px;">Bugünkü kayıt</div>
+        <div style="font-size:36px;font-weight:900;">${todayCount}</div>
+      </div>
+
+      <div style="border:1px solid rgba(120,170,255,.22);border-radius:18px;padding:16px;background:rgba(255,255,255,.03);">
+        <div style="font-size:13px;opacity:.75;margin-bottom:8px;">İnceleme bekleyen</div>
+        <div style="font-size:36px;font-weight:900;">${reviewCount}</div>
+      </div>
+    </div>
+
+    <div style="margin-top:8px;">
+      <h3 style="margin:0 0 14px 0;">Son kayıtlar</h3>
+      ${recentHtml}
+    </div>
+  `;
 }
 
-function validateForm(data) {
-  if (!data.date) return "Tarih boş olamaz.";
-  if (!data.employeeName) return "Çalışan seç.";
-  if (!data.criteria) return "Kriter seç.";
-  if (!data.score) return "Puan seç.";
-  return "";
-}
+function applyData(data) {
+  state.data = normalizeApiData(data);
 
-function resetFormAfterSave() {
-  $("scoreSelect").value = "";
-  $("noteInput").value = "";
-}
-
-async function loadBootstrapAndRender() {
-  setStatus("Sistem verileri yükleniyor...");
-  const data = await fetchBootstrap();
-  hydrateState(data);
-  populateEmployeeSelect();
-  populateCriteriaSelect();
+  fillEmployeeSelect();
+  fillCriteriaSelect();
   updateStats();
   renderEmployees();
   renderReports();
-  setStatus("Sistem hazır. Çalışan ve kriterler sheet üzerinden yüklendi.");
 }
 
-async function handleSaveClick() {
-  const btn = $("saveBtn");
-  const payload = collectFormData();
-  const validationError = validateForm(payload);
+function ensureApiConfigured() {
+  if (!APPS_SCRIPT_URL || APPS_SCRIPT_URL.includes("BURAYA_APPS_SCRIPT_EXEC_LINKINI_YAPISTIR")) {
+    throw new Error("APPS_SCRIPT_URL alanına Apps Script /exec linki girilmemiş.");
+  }
+}
 
-  if (validationError) {
-    alert(validationError);
+async function fetchJsonWithTimeout(url, options = {}, timeoutMs = 15000) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    const response = await fetch(url, {
+      ...options,
+      cache: "no-store",
+      signal: controller.signal
+    });
+
+    const text = await response.text();
+
+    let json;
+    try {
+      json = JSON.parse(text);
+    } catch (_) {
+      throw new Error("API JSON yerine farklı cevap döndü.");
+    }
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+
+    if (!json.ok) {
+      throw new Error(json.error || "API hata döndürdü.");
+    }
+
+    return json;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function loadBootstrap() {
+  ensureApiConfigured();
+
+  setStatus("Veriler yükleniyor...");
+
+  const url = new URL(APPS_SCRIPT_URL);
+  url.searchParams.set("action", "bootstrap");
+  url.searchParams.set("_ts", Date.now().toString());
+
+  const json = await fetchJsonWithTimeout(url.toString(), { method: "GET" });
+  applyData(json.data || {});
+
+  const user = state.user;
+  setStatus(
+    user
+      ? "Sistem hazır. Telegram kullanıcı bilgisi ve panel verileri yüklendi."
+      : "Sistem hazır. Tarayıcı testi modunda veriler yüklendi."
+  );
+}
+
+async function saveRecord() {
+  ensureApiConfigured();
+
+  const employeeName = $("employeeSelect")?.value?.trim() || "";
+  const criteria = $("criteriaSelect")?.value?.trim() || "";
+  const score = $("scoreSelect")?.value?.trim() || "";
+  const note = $("noteInput")?.value?.trim() || "";
+  const date = $("scoreDate")?.value?.trim() || todayYmd();
+
+  if (!employeeName) {
+    alert("Çalışan seçmeden kayıt atamazsın.");
     return;
   }
 
-  btn.disabled = true;
-  btn.textContent = "Kaydediliyor...";
+  if (!criteria) {
+    alert("Kriter seçmeden kayıt atamazsın.");
+    return;
+  }
+
+  if (!score) {
+    alert("Puan seçmeden kayıt atamazsın.");
+    return;
+  }
+
+  const btn = $("fakeSaveBtn");
+  const originalText = btn.textContent;
 
   try {
-    const result = await saveRecord(payload);
+    btn.disabled = true;
+    btn.textContent = "Kaydediliyor...";
 
-    if (result.data) {
-      hydrateState(result.data);
-    } else {
-      const fresh = await fetchBootstrap();
-      hydrateState(fresh);
-    }
+    setStatus("Kayıt gönderiliyor...");
 
-    populateEmployeeSelect();
-    populateCriteriaSelect();
-    updateStats();
-    renderEmployees();
-    renderReports();
-    resetFormAfterSave();
+    const tgInfo = getTelegramPayload();
 
+    const body = new URLSearchParams();
+    body.append("action", "savescore");
+    body.append("date", date);
+    body.append("employeeName", employeeName);
+    body.append("criteria", criteria);
+    body.append("score", score);
+    body.append("note", note);
+    body.append("telegramUserId", String(tgInfo.telegramUserId));
+    body.append("telegramUsername", tgInfo.telegramUsername);
+    body.append("fullName", tgInfo.fullName);
+
+    const json = await fetchJsonWithTimeout(
+      APPS_SCRIPT_URL,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8"
+        },
+        body: body.toString()
+      },
+      20000
+    );
+
+    applyData(json.data || {});
+
+    $("scoreSelect").value = "";
+    $("noteInput").value = "";
+
+    const low = Number(score) <= LOW_SCORE_THRESHOLD;
     setStatus(
-      `Kayıt başarıyla kaydedildi: ${payload.employeeName} / ${payload.criteria} / ${payload.score}`
+      low
+        ? `Kayıt alındı. ${employeeName} için düşük puan kaydı inceleme sırasına düştü.`
+        : `Kayıt alındı. ${employeeName} için değerlendirme başarıyla kaydedildi.`
     );
 
     switchTab("home");
+
+    if (state.tg?.HapticFeedback?.notificationOccurred) {
+      try {
+        state.tg.HapticFeedback.notificationOccurred("success");
+      } catch (_) {}
+    }
   } catch (err) {
     console.error(err);
-    setStatus(`Hata: ${err.message || err}`, true);
-    alert(`Kayıt sırasında hata oluştu:\n${err.message || err}`);
+    setStatus(`Kayıt hatası: ${err.message || err}`);
+    alert(`Kayıt gönderilemedi:\n${err.message || err}`);
   } finally {
     btn.disabled = false;
-    btn.textContent = "Kaydet";
+    btn.textContent = originalText;
   }
 }
 
-function setupActions() {
-  $("saveBtn").addEventListener("click", handleSaveClick);
+function setupSaveButton() {
+  const btn = $("fakeSaveBtn");
+  if (!btn) return;
+
+  btn.addEventListener("click", saveRecord);
 }
 
-document.addEventListener("DOMContentLoaded", async () => {
-  setupTabs();
-  setToday();
-  initTelegramInfo();
-  setupActions();
-
+async function bootstrapApp() {
   try {
-    await loadBootstrapAndRender();
+    setupTabs();
+    setToday();
+    setUserVisuals();
+    setupSaveButton();
+    await loadBootstrap();
   } catch (err) {
     console.error(err);
-    setStatus(`Veri yükleme hatası: ${err.message || err}`, true);
+    setStatus(`Bağlantı hatası: ${err.message || err}`);
+
+    if ($("employees")) {
+      $("employees").innerHTML = `
+        <h2>Çalışanlar</h2>
+        <p>Veri alınamadı. Önce Apps Script deploy linkini ve erişim ayarlarını kontrol et.</p>
+      `;
+    }
+
+    if ($("reports")) {
+      $("reports").innerHTML = `
+        <h2>Raporlar</h2>
+        <p>Veri alınamadı. API bağlantısı kurulmadan rapor oluşmaz.</p>
+      `;
+    }
   }
-});
+}
+
+document.addEventListener("DOMContentLoaded", bootstrapApp);
