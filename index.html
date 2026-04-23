@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Personel Performans Paneli</title>
+  <link rel="stylesheet" href="style.css" />
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+</head>
+<body>
+  <div class="app">
+    <div class="topbar">
+      <div>
+        <div class="eyebrow">TELEGRAM MINI APP</div>
+        <h1>Personel Performans Paneli</h1>
+      </div>
+      <div class="user-chip" id="userChip">Yükleniyor...</div>
+    </div>
+
+    <div class="stats">
+      <div class="card stat">
+        <div class="label">Aktif çalışan</div>
+        <div class="value" id="activeCount">0</div>
+      </div>
+      <div class="card stat">
+        <div class="label">Bugün girilen puan</div>
+        <div class="value" id="todayCount">0</div>
+      </div>
+      <div class="card stat">
+        <div class="label">Düşük puan kaydı</div>
+        <div class="value" id="lowScoreCount">0</div>
+      </div>
+    </div>
+
+    <div class="tabs">
+      <button class="tab active" data-tab="home">Ana Sayfa</button>
+      <button class="tab" data-tab="daily">Günlük Değerlendirme</button>
+      <button class="tab" data-tab="employees">Çalışanlar</button>
+      <button class="tab" data-tab="reports">Raporlar</button>
+    </div>
+
+    <section class="card section active" id="home">
+      <h2>Durum</h2>
+      <div class="status-line" id="statusText">Panel hazır.</div>
+      <div class="status-meta" id="userInfo">Kullanıcı bilgisi hazırlanıyor...</div>
+      <div class="status-meta" id="sourceInfo">Kaynak: kontrol ediliyor...</div>
+    </section>
+
+    <section class="card section" id="daily">
+      <h2>Günlük Değerlendirme</h2>
+
+      <div class="form-grid">
+        <div class="field">
+          <label for="scoreDate">Tarih</label>
+          <input type="date" id="scoreDate" />
+        </div>
+
+        <div class="field">
+          <label for="employeeSelect">Çalışan</label>
+          <select id="employeeSelect">
+            <option>Çalışan seç</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label for="criteriaSelect">Kriter</label>
+          <select id="criteriaSelect">
+            <option>Kriter seç</option>
+            <option>Mesai disiplini</option>
+            <option>İlk yanıt hızı</option>
+            <option>Operasyonel çeviklik</option>
+            <option>Problem çözme</option>
+            <option>İletişim kalitesi</option>
+            <option>Üye memnuniyeti</option>
+            <option>Slack/grup iletişimi</option>
+            <option>Ekip içi uyum</option>
+            <option>Sistem ve bonus bilgisi</option>
+            <option>Admin genel değerlendirme</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label for="scoreSelect">Puan</label>
+          <select id="scoreSelect">
+            <option>Puan seç</option>
+            <option>1</option>
+            <option>2</option>
+            <option>3</option>
+            <option>4</option>
+            <option>5</option>
+          </select>
+        </div>
+
+        <div class="field full">
+          <label for="noteInput">Not</label>
+          <textarea id="noteInput" rows="4" placeholder="Açıklama / gözlem yaz..."></textarea>
+        </div>
+      </div>
+
+      <div class="actions">
+        <button class="primary-btn" id="fakeSaveBtn">Kaydet</button>
+      </div>
+    </section>
+
+    <section class="card section" id="employees">
+      <h2>Çalışanlar</h2>
+      <p>Bu alan ikinci aşamada Apps Script verisiyle dolacak.</p>
+    </section>
+
+    <section class="card section" id="reports">
+      <h2>Raporlar</h2>
+      <p>Bu alan ikinci aşamada ortalama ve aylık özetlerle dolacak.</p>
+    </section>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
