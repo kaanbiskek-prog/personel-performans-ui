@@ -9,6 +9,10 @@ const state = {
   reviewQueue: []
 };
 
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 function switchTab(tabId) {
   document.querySelectorAll(".tab").forEach((btn) => {
     btn.classList.toggle("active", btn.dataset.tab === tabId);
@@ -38,10 +42,12 @@ function setToday() {
 
 function formatDisplayDate(dateStr) {
   if (!dateStr) return "-";
+
   if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
     const [y, m, d] = dateStr.split("-");
     return `${d}.${m}.${y}`;
   }
+
   return dateStr;
 }
 
@@ -62,7 +68,7 @@ function getTelegramUser() {
       tg.ready();
       tg.expand();
     } catch (e) {
-      console.warn("Telegram WebApp init uyarısı:", e);
+      console.warn("Telegram init uyarısı:", e);
     }
   }
 
@@ -74,9 +80,9 @@ function initTelegramInfo() {
 
   const fullName = user
     ? [user.first_name, user.last_name].filter(Boolean).join(" ").trim()
-    : "Bilinmiyor";
+    : "Tarayıcı Demo";
 
-  const username = user?.username ? `@${user.username}` : "@yok";
+  const username = user?.username ? `@${user.username}` : "@demo";
   const userId = user?.id || 0;
 
   $("userChip").textContent = user ? fullName : "Tarayıcı Demo";
@@ -95,8 +101,8 @@ function fillEmployeeSelect() {
 
   state.employees.forEach((emp) => {
     const opt = document.createElement("option");
-    opt.value = emp.name;
-    opt.textContent = emp.name;
+    opt.value = emp.name || "";
+    opt.textContent = emp.name || "";
     select.appendChild(opt);
   });
 }
@@ -117,7 +123,6 @@ function fillCriteriaSelect() {
 
 function renderStats() {
   const activeCount = state.employees.filter((x) => x.active !== false).length;
-
   const todayValue = $("scoreDate")?.value || "";
   const todayCount = state.records.filter((r) => r.date === todayValue).length;
   const lowScoreCount = state.records.filter((r) => Number(r.score) <= 2).length;
@@ -130,16 +135,13 @@ function renderStats() {
 function renderEmployees() {
   const list = $("employeeList");
   const pill = $("employeeCountPill");
+
   if (!list || !pill) return;
 
   pill.textContent = `${state.employees.length} kişi`;
 
   if (!state.employees.length) {
-    list.innerHTML = `
-      <div class="empty-box">
-        Henüz çalışan verisi yok.
-      </div>
-    `;
+    list.innerHTML = `<div class="empty-box">Henüz çalışan verisi yok.</div>`;
     return;
   }
 
@@ -160,7 +162,6 @@ function renderEmployees() {
 function buildSummaryCards() {
   const total = state.records.length;
   const low = state.records.filter((r) => Number(r.score) <= 2).length;
-
   const avg =
     total > 0
       ? (
@@ -258,7 +259,7 @@ async function loadBootstrap() {
     state.reviewQueue = Array.isArray(json.data?.reviewQueue) ? json.data.reviewQueue : [];
 
     renderAll();
-    $("statusText").textContent = "Sistem hazır. Veriler başarıyla yüklendi.";
+    $("statusText").textContent = "Sistem hazır.";
   } catch (err) {
     console.error("Bootstrap hatası:", err);
     $("statusText").textContent = `Yükleme hatası: ${err.message}`;
@@ -270,14 +271,36 @@ function resetFormAfterSave() {
   $("noteInput").value = "";
 }
 
+function getCurrentUserPayload() {
+  const tgUser = getTelegramUser();
+
+  const fullName = tgUser
+    ? [tgUser.first_name, tgUser.last_name].filter(Boolean).join(" ").trim()
+    : "Tarayıcı Demo";
+
+  return {
+    telegramUserId: tgUser?.id || 0,
+    telegramUsername: tgUser?.username ? `@${tgUser.username}` : "@demo",
+    fullName
+  };
+}
+
+async function sendScoreNoCors(payload) {
+  const body = new URLSearchParams(payload);
+
+  await fetch(API_URL, {
+    method: "POST",
+    body,
+    mode: "no-cors",
+    cache: "no-store"
+  });
+}
+
 function setupSaveButton() {
-  const oldBtn = $("saveBtn");
-  if (!oldBtn) return;
+  const btn = $("saveBtn");
+  if (!btn) return;
 
-  const newBtn = oldBtn.cloneNode(true);
-  oldBtn.parentNode.replaceChild(newBtn, oldBtn);
-
-  newBtn.addEventListener("click", async () => {
+  btn.addEventListener("click", async () => {
     const employeeName = $("employeeSelect").value.trim();
     const criteria = $("criteriaSelect").value.trim();
     const score = $("scoreSelect").value.trim();
@@ -289,13 +312,7 @@ function setupSaveButton() {
       return;
     }
 
-    const tgUser = getTelegramUser();
-    const fullName = tgUser
-      ? [tgUser.first_name, tgUser.last_name].filter(Boolean).join(" ").trim()
-      : "Tarayıcı Demo";
-
-    const telegramUsername = tgUser?.username ? `@${tgUser.username}` : "@demo";
-    const telegramUserId = tgUser?.id || 0;
+    const beforeCount = state.records.length;
 
     const payload = {
       action: "saveScore",
@@ -304,61 +321,46 @@ function setupSaveButton() {
       criteria,
       score,
       note,
-      telegramUserId,
-      telegramUsername,
-      fullName
+      ...getCurrentUserPayload()
     };
 
     try {
-      newBtn.disabled = true;
-      newBtn.textContent = "Kaydediliyor...";
+      btn.disabled = true;
+      btn.textContent = "Kaydediliyor...";
       $("statusText").textContent = "Kayıt gönderiliyor...";
 
-      const body = new URLSearchParams(payload);
+      await sendScoreNoCors(payload);
 
-      const res = await fetch(API_URL, {
-        method: "POST",
-        body,
-        cache: "no-store",
-        redirect: "follow"
-      });
+      await sleep(1500);
+      await loadBootstrap();
 
-      if (!res.ok) {
-        throw new Error(`HTTP ${res.status}`);
+      const afterCount = state.records.length;
+
+      if (afterCount > beforeCount) {
+        resetFormAfterSave();
+        switchTab("home");
+        $("statusText").textContent = `${employeeName} için kayıt başarıyla kaydedildi.`;
+        alert("Kayıt başarıyla kaydedildi.");
+      } else {
+        $("statusText").textContent =
+          "İstek gönderildi ama kayıt listede görünmedi. Apps Script tarafını kontrol et.";
+        alert("İstek gönderildi ama kayıt doğrulanamadı. Sheet tarafını kontrol et.");
       }
-
-      const json = await res.json();
-
-      if (!json.ok) {
-        throw new Error(json.error || "Kayıt başarısız.");
-      }
-
-      state.employees = Array.isArray(json.data?.employees) ? json.data.employees : state.employees;
-      state.criteria = Array.isArray(json.data?.criteria) ? json.data.criteria : state.criteria;
-      state.records = Array.isArray(json.data?.records) ? json.data.records : state.records;
-      state.reviewQueue = Array.isArray(json.data?.reviewQueue) ? json.data.reviewQueue : state.reviewQueue;
-
-      renderAll();
-      resetFormAfterSave();
-      switchTab("home");
-
-      $("statusText").textContent = `${employeeName} için kayıt başarıyla kaydedildi.`;
-      alert("Kayıt başarıyla kaydedildi.");
     } catch (err) {
       console.error("Kaydetme hatası:", err);
       $("statusText").textContent = `Kaydetme hatası: ${err.message}`;
       alert(`Kaydetme hatası: ${err.message}`);
     } finally {
-      newBtn.disabled = false;
-      newBtn.textContent = "Kaydet";
+      btn.disabled = false;
+      btn.textContent = "Kaydet";
     }
   });
 }
 
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("DOMContentLoaded", async () => {
   setupTabs();
   setToday();
   initTelegramInfo();
   setupSaveButton();
-  loadBootstrap();
+  await loadBootstrap();
 });
