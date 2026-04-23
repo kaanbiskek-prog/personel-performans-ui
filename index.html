@@ -83,7 +83,7 @@
 
         <div class="field full">
           <label for="noteInput">Not</label>
-          <textarea id="noteInput" rows="4" placeholder="Açıklama / gözlem yaz..."></textarea>
+          <textarea id="noteInput" rows="5" placeholder="Açıklama / gözlem yaz..."></textarea>
         </div>
       </div>
 
@@ -93,56 +93,25 @@
     </section>
 
     <section class="card section" id="employees">
-      <h2>Çalışanlar</h2>
-      <div id="employeesContent" class="employee-grid">
-        <div class="empty-box">Çalışan verileri yükleniyor...</div>
+      <div class="section-head">
+        <h2>Çalışanlar</h2>
+        <div class="pill" id="employeeCountPill">0 kişi</div>
       </div>
+      <div id="employeeList" class="employee-grid"></div>
     </section>
 
     <section class="card section" id="reports">
-      <h2>Raporlar</h2>
-
-      <div class="report-cards">
-        <div class="mini-card">
-          <div class="mini-label">Toplam kayıt</div>
-          <div class="mini-value" id="reportTotalRecords">0</div>
-        </div>
-        <div class="mini-card">
-          <div class="mini-label">Genel ortalama</div>
-          <div class="mini-value" id="reportAverageScore">0.00</div>
-        </div>
-        <div class="mini-card">
-          <div class="mini-label">İnceleme kuyruğu</div>
-          <div class="mini-value" id="reportReviewQueue">0</div>
-        </div>
+      <div class="section-head">
+        <h2>Raporlar</h2>
+        <div class="pill" id="reportCountPill">0 kayıt</div>
       </div>
 
-      <div class="table-block">
-        <div class="table-title">Personel Ortalamaları</div>
-        <div class="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>Çalışan</th>
-                <th>Rol</th>
-                <th>Kayıt</th>
-                <th>Ortalama</th>
-                <th>Düşük Puan</th>
-              </tr>
-            </thead>
-            <tbody id="rankingBody">
-              <tr>
-                <td colspan="5">Veri bekleniyor...</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
+      <div id="reportSummary" class="report-summary-grid"></div>
 
-      <div class="table-block">
-        <div class="table-title">İnceleme Kuyruğu</div>
+      <div class="table-card">
+        <div class="table-title">Son kayıtlar</div>
         <div class="table-wrap">
-          <table>
+          <table class="data-table">
             <thead>
               <tr>
                 <th>Tarih</th>
@@ -150,11 +119,12 @@
                 <th>Kriter</th>
                 <th>Puan</th>
                 <th>Not</th>
+                <th>Giren</th>
               </tr>
             </thead>
-            <tbody id="reviewBody">
+            <tbody id="recentRecordsBody">
               <tr>
-                <td colspan="5">Veri bekleniyor...</td>
+                <td colspan="6" class="empty-td">Henüz kayıt yok.</td>
               </tr>
             </tbody>
           </table>
