@@ -1,4 +1,4 @@
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyBmT4GrkMfU0sF_oIPkXMEWvLBgv3C__kg18R2Ji-Hgq3xdx_8Z-435ZTV4H9dd8rJ/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbyBmT4GrkMfU0sF_oIPkXMEWvLBgv3C__kg18R2Ji-Hgq3xdx_8Z-435ZTV4H9dd8rJ/exec";
 
 const $ = (id) => document.getElementById(id);
 
@@ -6,8 +6,7 @@ const state = {
   employees: [],
   criteria: [],
   records: [],
-  reviewQueue: [],
-  telegramUser: null
+  reviewQueue: []
 };
 
 function switchTab(tabId) {
@@ -30,23 +29,24 @@ function setToday() {
   const input = $("scoreDate");
   if (!input) return;
 
-  const now = new Date();
-  const yyyy = now.getFullYear();
-  const mm = String(now.getMonth() + 1).padStart(2, "0");
-  const dd = String(now.getDate()).padStart(2, "0");
+  const d = new Date();
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
   input.value = `${yyyy}-${mm}-${dd}`;
 }
 
-function getTodayString() {
-  const now = new Date();
-  const yyyy = now.getFullYear();
-  const mm = String(now.getMonth() + 1).padStart(2, "0");
-  const dd = String(now.getDate()).padStart(2, "0");
-  return `${yyyy}-${mm}-${dd}`;
+function formatDisplayDate(dateStr) {
+  if (!dateStr) return "-";
+  if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+    const [y, m, d] = dateStr.split("-");
+    return `${d}.${m}.${y}`;
+  }
+  return dateStr;
 }
 
-function escapeHtml(value) {
-  return String(value ?? "")
+function escapeHtml(text) {
+  return String(text || "")
     .replaceAll("&", "&amp;")
     .replaceAll("<", "&lt;")
     .replaceAll(">", "&gt;")
@@ -54,212 +54,151 @@ function escapeHtml(value) {
     .replaceAll("'", "&#039;");
 }
 
-function formatDateTR(value) {
-  if (!value) return "-";
-
-  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
-    const [y, m, d] = value.split("-");
-    return `${d}.${m}.${y}`;
-  }
-
-  return value;
-}
-
-function initTelegramInfo() {
+function getTelegramUser() {
   const tg = window.Telegram?.WebApp;
 
   if (tg) {
     try {
       tg.ready();
       tg.expand();
-    } catch (err) {}
+    } catch (e) {
+      console.warn("Telegram WebApp init uyarısı:", e);
+    }
   }
 
-  const user = tg?.initDataUnsafe?.user || null;
-  state.telegramUser = user;
+  return tg?.initDataUnsafe?.user || null;
+}
+
+function initTelegramInfo() {
+  const user = getTelegramUser();
 
   const fullName = user
     ? [user.first_name, user.last_name].filter(Boolean).join(" ").trim()
-    : "Tarayıcı Demo";
+    : "Bilinmiyor";
 
-  const username = user?.username ? `@${user.username}` : "@demo";
+  const username = user?.username ? `@${user.username}` : "@yok";
   const userId = user?.id || 0;
 
-  if ($("userChip")) $("userChip").textContent = user ? fullName : "Tarayıcı Demo";
-  if ($("userInfo")) $("userInfo").textContent = `Kullanıcı: ${fullName} | ${username} | ID: ${userId}`;
-  if ($("sourceInfo")) $("sourceInfo").textContent = user
+  $("userChip").textContent = user ? fullName : "Tarayıcı Demo";
+  $("userInfo").textContent = `Kullanıcı: ${fullName} | ${username} | ID: ${userId}`;
+  $("sourceInfo").textContent = user
     ? "Kaynak: Telegram Mini App"
     : "Kaynak: Tarayıcı testi / Telegram dışı açılış";
+  $("statusText").textContent = "Veriler yükleniyor...";
 }
 
-async function fetchJsonFromResponse(response) {
-  const text = await response.text();
-
-  try {
-    return JSON.parse(text);
-  } catch (err) {
-    throw new Error(`Geçersiz sunucu cevabı: ${text.slice(0, 200)}`);
-  }
-}
-
-async function loadBootstrap() {
-  if (!APPS_SCRIPT_URL || APPS_SCRIPT_URL.includes("BURAYA_APPS_SCRIPT_EXEC_LINKINI_YAPISTIR")) {
-    throw new Error("APPS_SCRIPT_URL boş. app.js içine /exec linkini yapıştır.");
-  }
-
-  if ($("statusText")) $("statusText").textContent = "Veriler yükleniyor...";
-
-  const url = `${APPS_SCRIPT_URL}?action=bootstrap&_=${Date.now()}`;
-
-  const response = await fetch(url, {
-    method: "GET",
-    redirect: "follow",
-    cache: "no-store"
-  });
-
-  const result = await fetchJsonFromResponse(response);
-
-  if (!response.ok) {
-    throw new Error(`HTTP ${response.status}`);
-  }
-
-  if (!result.ok) {
-    throw new Error(result.error || "Bootstrap verisi alınamadı.");
-  }
-
-  const data = result.data || {};
-
-  state.employees = Array.isArray(data.employees) ? data.employees : [];
-  state.criteria = Array.isArray(data.criteria) ? data.criteria : [];
-  state.records = Array.isArray(data.records) ? data.records : [];
-  state.reviewQueue = Array.isArray(data.reviewQueue) ? data.reviewQueue : [];
-
-  populateEmployeeSelect();
-  populateCriteriaSelect();
-  renderEmployees();
-  renderReports();
-  updateStats();
-
-  if ($("statusText")) $("statusText").textContent = "Sistem hazır. Veriler yüklendi.";
-}
-
-function populateEmployeeSelect() {
+function fillEmployeeSelect() {
   const select = $("employeeSelect");
   if (!select) return;
 
   select.innerHTML = `<option value="">Çalışan seç</option>`;
 
-  state.employees.forEach((employee) => {
-    if (!employee || !employee.name) return;
-    if (employee.active === false) return;
-
+  state.employees.forEach((emp) => {
     const opt = document.createElement("option");
-    opt.value = employee.name;
-    opt.textContent = employee.name;
+    opt.value = emp.name;
+    opt.textContent = emp.name;
     select.appendChild(opt);
   });
 }
 
-function populateCriteriaSelect() {
+function fillCriteriaSelect() {
   const select = $("criteriaSelect");
   if (!select) return;
 
   select.innerHTML = `<option value="">Kriter seç</option>`;
 
-  state.criteria.forEach((criteria) => {
+  state.criteria.forEach((item) => {
     const opt = document.createElement("option");
-    opt.value = criteria;
-    opt.textContent = criteria;
+    opt.value = item;
+    opt.textContent = item;
     select.appendChild(opt);
   });
 }
 
-function updateStats() {
-  const activeEmployees = state.employees.filter((x) => x && x.active !== false).length;
-  const today = getTodayString();
-  const todayRecords = state.records.filter((x) => x.date === today).length;
-  const lowScoreRecords = state.records.filter((x) => Number(x.score) <= 2).length;
+function renderStats() {
+  const activeCount = state.employees.filter((x) => x.active !== false).length;
 
-  if ($("activeCount")) $("activeCount").textContent = String(activeEmployees);
-  if ($("todayCount")) $("todayCount").textContent = String(todayRecords);
-  if ($("lowScoreCount")) $("lowScoreCount").textContent = String(lowScoreRecords);
+  const todayValue = $("scoreDate")?.value || "";
+  const todayCount = state.records.filter((r) => r.date === todayValue).length;
+  const lowScoreCount = state.records.filter((r) => Number(r.score) <= 2).length;
 
-  if ($("employeeCountPill")) {
-    $("employeeCountPill").textContent = `${activeEmployees} kişi`;
-  }
-
-  if ($("reportCountPill")) {
-    $("reportCountPill").textContent = `${state.records.length} kayıt`;
-  }
+  $("activeCount").textContent = String(activeCount);
+  $("todayCount").textContent = String(todayCount);
+  $("lowScoreCount").textContent = String(lowScoreCount);
 }
 
 function renderEmployees() {
-  const wrap = $("employeeList");
-  if (!wrap) return;
+  const list = $("employeeList");
+  const pill = $("employeeCountPill");
+  if (!list || !pill) return;
+
+  pill.textContent = `${state.employees.length} kişi`;
 
   if (!state.employees.length) {
-    wrap.innerHTML = `<div class="empty-box">Çalışan verisi bulunamadı.</div>`;
+    list.innerHTML = `
+      <div class="empty-box">
+        Henüz çalışan verisi yok.
+      </div>
+    `;
     return;
   }
 
-  wrap.innerHTML = state.employees
-    .filter((employee) => employee && employee.name)
-    .map((employee, index) => {
-      const role = employee.role || "Belirtilmedi";
-      const activeText = employee.active === false ? "Pasif" : "Aktif";
-
+  list.innerHTML = state.employees
+    .map((emp, index) => {
       return `
         <div class="employee-card">
-          <div class="employee-no">#${index + 1}</div>
-          <div class="employee-name">${escapeHtml(employee.name)}</div>
-          <div class="employee-meta">Rol: ${escapeHtml(role)}</div>
-          <div class="employee-meta">Durum: ${escapeHtml(activeText)}</div>
+          <div class="employee-index">#${index + 1}</div>
+          <div class="employee-name">${escapeHtml(emp.name)}</div>
+          <div class="employee-meta">Rol: ${escapeHtml(emp.role || "Belirtilmedi")}</div>
+          <div class="employee-meta">Durum: ${emp.active === false ? "Pasif" : "Aktif"}</div>
         </div>
       `;
     })
     .join("");
 }
 
-function buildReportSummary() {
+function buildSummaryCards() {
   const total = state.records.length;
-  const low = state.records.filter((x) => Number(x.score) <= 2).length;
+  const low = state.records.filter((r) => Number(r.score) <= 2).length;
 
-  let average = 0;
-  if (total > 0) {
-    const sum = state.records.reduce((acc, item) => acc + Number(item.score || 0), 0);
-    average = sum / total;
-  }
+  const avg =
+    total > 0
+      ? (
+          state.records.reduce((sum, r) => sum + Number(r.score || 0), 0) / total
+        ).toFixed(2)
+      : "0.00";
 
   return [
-    { label: "Toplam kayıt", value: total },
-    { label: "İnceleme gereken", value: low },
-    { label: "Ortalama puan", value: total ? average.toFixed(2) : "0.00" }
+    { title: "Toplam kayıt", value: total },
+    { title: "Düşük puan", value: low },
+    { title: "Ortalama puan", value: avg }
   ];
 }
 
 function renderReports() {
-  const summaryWrap = $("reportSummary");
-  const body = $("recentRecordsBody");
+  const summary = $("reportSummary");
+  const pill = $("reportCountPill");
+  const tbody = $("recentRecordsBody");
 
-  const summary = buildReportSummary();
+  if (!summary || !pill || !tbody) return;
 
-  if (summaryWrap) {
-    summaryWrap.innerHTML = summary
-      .map((item) => {
-        return `
-          <div class="summary-card">
-            <div class="summary-label">${escapeHtml(item.label)}</div>
-            <div class="summary-value">${escapeHtml(item.value)}</div>
-          </div>
-        `;
-      })
-      .join("");
-  }
+  pill.textContent = `${state.records.length} kayıt`;
 
-  if (!body) return;
+  const cards = buildSummaryCards();
+
+  summary.innerHTML = cards
+    .map(
+      (card) => `
+        <div class="mini-stat">
+          <div class="mini-stat-title">${escapeHtml(card.title)}</div>
+          <div class="mini-stat-value">${escapeHtml(card.value)}</div>
+        </div>
+      `
+    )
+    .join("");
 
   if (!state.records.length) {
-    body.innerHTML = `
+    tbody.innerHTML = `
       <tr>
         <td colspan="6" class="empty-td">Henüz kayıt yok.</td>
       </tr>
@@ -267,179 +206,159 @@ function renderReports() {
     return;
   }
 
-  const recent = [...state.records].reverse().slice(0, 15);
+  const lastRecords = [...state.records].reverse().slice(0, 10);
 
-  body.innerHTML = recent
-    .map((item) => {
-      return `
+  tbody.innerHTML = lastRecords
+    .map(
+      (r) => `
         <tr>
-          <td>${escapeHtml(formatDateTR(item.date))}</td>
-          <td>${escapeHtml(item.employeeName || "-")}</td>
-          <td>${escapeHtml(item.criteria || "-")}</td>
-          <td>${escapeHtml(item.score || "-")}</td>
-          <td>${escapeHtml(item.note || "-")}</td>
-          <td>${escapeHtml(item.fullName || item.telegramUsername || "-")}</td>
+          <td>${escapeHtml(formatDisplayDate(r.date))}</td>
+          <td>${escapeHtml(r.employeeName)}</td>
+          <td>${escapeHtml(r.criteria)}</td>
+          <td>${escapeHtml(r.score)}</td>
+          <td>${escapeHtml(r.note || "-")}</td>
+          <td>${escapeHtml(r.fullName || r.telegramUsername || "-")}</td>
         </tr>
-      `;
-    })
+      `
+    )
     .join("");
 }
 
-function getCurrentUserPayload() {
-  const user = state.telegramUser;
-
-  if (!user) {
-    return {
-      telegramUserId: "0",
-      telegramUsername: "@demo",
-      fullName: "Tarayıcı Demo"
-    };
-  }
-
-  const fullName = [user.first_name, user.last_name].filter(Boolean).join(" ").trim();
-
-  return {
-    telegramUserId: String(user.id || 0),
-    telegramUsername: user.username ? `@${user.username}` : "@yok",
-    fullName: fullName || "Telegram Kullanıcı"
-  };
+function renderAll() {
+  fillEmployeeSelect();
+  fillCriteriaSelect();
+  renderStats();
+  renderEmployees();
+  renderReports();
 }
 
-async function saveRecordToApi(payload) {
-  const formData = new URLSearchParams();
+async function loadBootstrap() {
+  try {
+    $("statusText").textContent = "Veriler yükleniyor...";
 
-  Object.entries(payload).forEach(([key, value]) => {
-    formData.append(key, value == null ? "" : String(value));
-  });
+    const url = `${API_URL}?action=bootstrap&_=${Date.now()}`;
+    const res = await fetch(url, {
+      method: "GET",
+      cache: "no-store"
+    });
 
-  const response = await fetch(APPS_SCRIPT_URL, {
-    method: "POST",
-    body: formData,
-    redirect: "follow",
-    cache: "no-store"
-  });
+    if (!res.ok) {
+      throw new Error(`HTTP ${res.status}`);
+    }
 
-  const result = await fetchJsonFromResponse(response);
+    const json = await res.json();
 
-  if (!response.ok) {
-    throw new Error(`HTTP ${response.status}`);
+    if (!json.ok) {
+      throw new Error(json.error || "Bootstrap verisi alınamadı.");
+    }
+
+    state.employees = Array.isArray(json.data?.employees) ? json.data.employees : [];
+    state.criteria = Array.isArray(json.data?.criteria) ? json.data.criteria : [];
+    state.records = Array.isArray(json.data?.records) ? json.data.records : [];
+    state.reviewQueue = Array.isArray(json.data?.reviewQueue) ? json.data.reviewQueue : [];
+
+    renderAll();
+    $("statusText").textContent = "Sistem hazır. Veriler başarıyla yüklendi.";
+  } catch (err) {
+    console.error("Bootstrap hatası:", err);
+    $("statusText").textContent = `Yükleme hatası: ${err.message}`;
   }
-
-  if (!result.ok) {
-    throw new Error(result.error || "Kayıt kaydedilemedi.");
-  }
-
-  return result;
 }
 
 function resetFormAfterSave() {
-  if ($("scoreSelect")) $("scoreSelect").value = "";
-  if ($("criteriaSelect")) $("criteriaSelect").value = "";
-  if ($("noteInput")) $("noteInput").value = "";
+  $("scoreSelect").value = "";
+  $("noteInput").value = "";
 }
 
 function setupSaveButton() {
-  const btn = $("saveBtn");
-  if (!btn) return;
+  const oldBtn = $("saveBtn");
+  if (!oldBtn) return;
 
-  btn.removeEventListener("click", handleSaveClick);
-  btn.addEventListener("click", handleSaveClick);
-}
+  const newBtn = oldBtn.cloneNode(true);
+  oldBtn.parentNode.replaceChild(newBtn, oldBtn);
 
-async function handleSaveClick() {
-  const btn = $("saveBtn");
-  const employeeName = $("employeeSelect")?.value?.trim() || "";
-  const criteria = $("criteriaSelect")?.value?.trim() || "";
-  const score = $("scoreSelect")?.value?.trim() || "";
-  const note = $("noteInput")?.value?.trim() || "";
-  const date = $("scoreDate")?.value?.trim() || getTodayString();
+  newBtn.addEventListener("click", async () => {
+    const employeeName = $("employeeSelect").value.trim();
+    const criteria = $("criteriaSelect").value.trim();
+    const score = $("scoreSelect").value.trim();
+    const note = $("noteInput").value.trim();
+    const date = $("scoreDate").value.trim();
 
-  if (!employeeName) {
-    alert("Çalışan seçmeden kayıt atamazsın.");
-    return;
-  }
-
-  if (!criteria) {
-    alert("Kriter seçmeden kayıt atamazsın.");
-    return;
-  }
-
-  if (!score) {
-    alert("Puan seçmeden kayıt atamazsın.");
-    return;
-  }
-
-  try {
-    btn.disabled = true;
-    btn.textContent = "Kaydediliyor...";
-
-    if ($("statusText")) {
-      $("statusText").textContent = "Kayıt gönderiliyor...";
+    if (!employeeName || !criteria || !score || !date) {
+      alert("Çalışan, kriter, puan ve tarih zorunlu.");
+      return;
     }
 
-    const userPayload = getCurrentUserPayload();
+    const tgUser = getTelegramUser();
+    const fullName = tgUser
+      ? [tgUser.first_name, tgUser.last_name].filter(Boolean).join(" ").trim()
+      : "Tarayıcı Demo";
 
-    const result = await saveRecordToApi({
+    const telegramUsername = tgUser?.username ? `@${tgUser.username}` : "@demo";
+    const telegramUserId = tgUser?.id || 0;
+
+    const payload = {
       action: "saveScore",
       date,
       employeeName,
       criteria,
       score,
       note,
-      telegramUserId: userPayload.telegramUserId,
-      telegramUsername: userPayload.telegramUsername,
-      fullName: userPayload.fullName
-    });
+      telegramUserId,
+      telegramUsername,
+      fullName
+    };
 
-    if (result.data) {
-      state.employees = Array.isArray(result.data.employees) ? result.data.employees : state.employees;
-      state.criteria = Array.isArray(result.data.criteria) ? result.data.criteria : state.criteria;
-      state.records = Array.isArray(result.data.records) ? result.data.records : state.records;
-      state.reviewQueue = Array.isArray(result.data.reviewQueue) ? result.data.reviewQueue : state.reviewQueue;
-    } else if (result.record) {
-      state.records.push(result.record);
-    }
+    try {
+      newBtn.disabled = true;
+      newBtn.textContent = "Kaydediliyor...";
+      $("statusText").textContent = "Kayıt gönderiliyor...";
 
-    populateEmployeeSelect();
-    populateCriteriaSelect();
-    renderEmployees();
-    renderReports();
-    updateStats();
-    resetFormAfterSave();
+      const body = new URLSearchParams(payload);
 
-    if ($("statusText")) {
+      const res = await fetch(API_URL, {
+        method: "POST",
+        body,
+        cache: "no-store",
+        redirect: "follow"
+      });
+
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status}`);
+      }
+
+      const json = await res.json();
+
+      if (!json.ok) {
+        throw new Error(json.error || "Kayıt başarısız.");
+      }
+
+      state.employees = Array.isArray(json.data?.employees) ? json.data.employees : state.employees;
+      state.criteria = Array.isArray(json.data?.criteria) ? json.data.criteria : state.criteria;
+      state.records = Array.isArray(json.data?.records) ? json.data.records : state.records;
+      state.reviewQueue = Array.isArray(json.data?.reviewQueue) ? json.data.reviewQueue : state.reviewQueue;
+
+      renderAll();
+      resetFormAfterSave();
+      switchTab("home");
+
       $("statusText").textContent = `${employeeName} için kayıt başarıyla kaydedildi.`;
+      alert("Kayıt başarıyla kaydedildi.");
+    } catch (err) {
+      console.error("Kaydetme hatası:", err);
+      $("statusText").textContent = `Kaydetme hatası: ${err.message}`;
+      alert(`Kaydetme hatası: ${err.message}`);
+    } finally {
+      newBtn.disabled = false;
+      newBtn.textContent = "Kaydet";
     }
-
-    switchTab("home");
-    alert("Kayıt başarıyla kaydedildi.");
-  } catch (err) {
-    console.error("Kaydetme hatası:", err);
-    if ($("statusText")) {
-      $("statusText").textContent = `Kayıt hatası: ${err.message}`;
-    }
-    alert(`Kaydetme hatası: ${err.message}`);
-  } finally {
-    btn.disabled = false;
-    btn.textContent = "Kaydet";
-  }
+  });
 }
 
-async function initApp() {
+document.addEventListener("DOMContentLoaded", () => {
   setupTabs();
   setToday();
   initTelegramInfo();
   setupSaveButton();
-
-  try {
-    await loadBootstrap();
-  } catch (err) {
-    console.error("Bootstrap hatası:", err);
-    if ($("statusText")) {
-      $("statusText").textContent = `Veri yükleme hatası: ${err.message}`;
-    }
-    alert(`Veri yükleme hatası: ${err.message}`);
-  }
-}
-
-document.addEventListener("DOMContentLoaded", initApp);
+  loadBootstrap();
+});
