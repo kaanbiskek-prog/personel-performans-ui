@@ -41,9 +41,9 @@
 
     <section class="card section active" id="home">
       <h2>Durum</h2>
-      <div class="status-line" id="statusText">Panel hazır.</div>
+      <div class="status-line" id="statusText">Panel hazırlanıyor...</div>
       <div class="status-meta" id="userInfo">Kullanıcı bilgisi hazırlanıyor...</div>
-      <div class="status-meta" id="sourceInfo">Kaynak: kontrol ediliyor...</div>
+      <div class="status-meta" id="sourceInfo">Kaynak kontrol ediliyor...</div>
     </section>
 
     <section class="card section" id="daily">
@@ -58,36 +58,26 @@
         <div class="field">
           <label for="employeeSelect">Çalışan</label>
           <select id="employeeSelect">
-            <option>Çalışan seç</option>
+            <option value="">Çalışan seç</option>
           </select>
         </div>
 
         <div class="field">
           <label for="criteriaSelect">Kriter</label>
           <select id="criteriaSelect">
-            <option>Kriter seç</option>
-            <option>Mesai disiplini</option>
-            <option>İlk yanıt hızı</option>
-            <option>Operasyonel çeviklik</option>
-            <option>Problem çözme</option>
-            <option>İletişim kalitesi</option>
-            <option>Üye memnuniyeti</option>
-            <option>Slack/grup iletişimi</option>
-            <option>Ekip içi uyum</option>
-            <option>Sistem ve bonus bilgisi</option>
-            <option>Admin genel değerlendirme</option>
+            <option value="">Kriter seç</option>
           </select>
         </div>
 
         <div class="field">
           <label for="scoreSelect">Puan</label>
           <select id="scoreSelect">
-            <option>Puan seç</option>
-            <option>1</option>
-            <option>2</option>
-            <option>3</option>
-            <option>4</option>
-            <option>5</option>
+            <option value="">Puan seç</option>
+            <option value="1">1</option>
+            <option value="2">2</option>
+            <option value="3">3</option>
+            <option value="4">4</option>
+            <option value="5">5</option>
           </select>
         </div>
 
@@ -98,18 +88,78 @@
       </div>
 
       <div class="actions">
-        <button class="primary-btn" id="fakeSaveBtn">Kaydet</button>
+        <button class="primary-btn" id="saveBtn">Kaydet</button>
       </div>
     </section>
 
     <section class="card section" id="employees">
       <h2>Çalışanlar</h2>
-      <p>Bu alan ikinci aşamada Apps Script verisiyle dolacak.</p>
+      <div id="employeesContent" class="employee-grid">
+        <div class="empty-box">Çalışan verileri yükleniyor...</div>
+      </div>
     </section>
 
     <section class="card section" id="reports">
       <h2>Raporlar</h2>
-      <p>Bu alan ikinci aşamada ortalama ve aylık özetlerle dolacak.</p>
+
+      <div class="report-cards">
+        <div class="mini-card">
+          <div class="mini-label">Toplam kayıt</div>
+          <div class="mini-value" id="reportTotalRecords">0</div>
+        </div>
+        <div class="mini-card">
+          <div class="mini-label">Genel ortalama</div>
+          <div class="mini-value" id="reportAverageScore">0.00</div>
+        </div>
+        <div class="mini-card">
+          <div class="mini-label">İnceleme kuyruğu</div>
+          <div class="mini-value" id="reportReviewQueue">0</div>
+        </div>
+      </div>
+
+      <div class="table-block">
+        <div class="table-title">Personel Ortalamaları</div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Çalışan</th>
+                <th>Rol</th>
+                <th>Kayıt</th>
+                <th>Ortalama</th>
+                <th>Düşük Puan</th>
+              </tr>
+            </thead>
+            <tbody id="rankingBody">
+              <tr>
+                <td colspan="5">Veri bekleniyor...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="table-block">
+        <div class="table-title">İnceleme Kuyruğu</div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Tarih</th>
+                <th>Çalışan</th>
+                <th>Kriter</th>
+                <th>Puan</th>
+                <th>Not</th>
+              </tr>
+            </thead>
+            <tbody id="reviewBody">
+              <tr>
+                <td colspan="5">Veri bekleniyor...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
     </section>
   </div>
 
