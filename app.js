@@ -1,4 +1,4 @@
-const APPS_SCRIPT_URL = "BURAYA_APPS_SCRIPT_EXEC_LINKINI_YAPISTIR";
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyBmT4GrkMfU0sF_oIPkXMEWvLBgv3C__kg18R2Ji-Hgq3xdx_8Z-435ZTV4H9dd8rJ/exec";
 const LOW_SCORE_THRESHOLD = 2;
 
 const $ = (id) => document.getElementById(id);
