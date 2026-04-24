@@ -95,8 +95,95 @@
         <div class="pill" id="employeeCountPill">0 kişi</div>
       </div>
 
-      <div id="employeeList" class="employee-grid">
-        <div class="empty-block">Henüz çalışan yok.</div>
+      <div class="employee-layout">
+        <div class="employee-side">
+          <div id="employeeList" class="employee-grid">
+            <div class="empty-block">Henüz personel yok.</div>
+          </div>
+        </div>
+
+        <div class="employee-side">
+          <div class="manage-card" id="managePersonnelCard">
+            <div class="manage-head">
+              <h3>Personel Yönetimi</h3>
+              <p class="muted-text">Buradan personel ekleyebilir, güncelleyebilir ve pasife alabilirsin.</p>
+            </div>
+
+            <div class="field">
+              <label for="personnelPicker">Mevcut personel</label>
+              <select id="personnelPicker">
+                <option value="">Yeni personel ekle</option>
+              </select>
+            </div>
+
+            <div class="form-grid">
+              <div class="field">
+                <label for="personnelNameInput">Ad Soyad</label>
+                <input type="text" id="personnelNameInput" placeholder="Örn: Emre Yılmaz" />
+              </div>
+
+              <div class="field">
+                <label for="personnelRoleSelect">Rol</label>
+                <select id="personnelRoleSelect">
+                  <option value="calisan">Çalışan</option>
+                  <option value="yonetici">Yönetici</option>
+                  <option value="admin">Admin</option>
+                </select>
+              </div>
+
+              <div class="field">
+                <label for="personnelActiveSelect">Durum</label>
+                <select id="personnelActiveSelect">
+                  <option value="true">Aktif</option>
+                  <option value="false">Pasif</option>
+                </select>
+              </div>
+
+              <div class="field">
+                <label for="personnelCanScoreSelect">Puan verebilir</label>
+                <select id="personnelCanScoreSelect">
+                  <option value="true">Evet</option>
+                  <option value="false">Hayır</option>
+                </select>
+              </div>
+
+              <div class="field">
+                <label for="personnelCanViewReportsSelect">Rapor görebilir</label>
+                <select id="personnelCanViewReportsSelect">
+                  <option value="true">Evet</option>
+                  <option value="false">Hayır</option>
+                </select>
+              </div>
+
+              <div class="field">
+                <label for="personnelTgIdInput">Telegram User ID</label>
+                <input type="text" id="personnelTgIdInput" placeholder="Örn: 7801726656" />
+              </div>
+
+              <div class="field full">
+                <label for="personnelTgUsernameInput">Telegram Username</label>
+                <input type="text" id="personnelTgUsernameInput" placeholder="Örn: kaanbm veya @kaanbm" />
+              </div>
+            </div>
+
+            <div class="small-info">
+              Not: Rolü <b>admin</b> veya <b>yonetici</b> olanlar “Çalışan seç” listesinde görünmez.
+            </div>
+
+            <div class="actions multi-actions">
+              <button class="primary-btn" id="personnelSaveBtn">Kaydet / Güncelle</button>
+              <button class="secondary-btn" id="personnelResetBtn">Formu Temizle</button>
+              <button class="danger-btn" id="personnelDeactivateBtn">Pasife Al</button>
+            </div>
+          </div>
+
+          <div class="manage-card locked-card hidden" id="managePersonnelLocked">
+            <h3>Personel Yönetimi</h3>
+            <div class="locked-note">
+              Bu alan sadece admin / yönetici yetkisi olan kullanıcıya açıktır.
+            </div>
+          </div>
+        </div>
       </div>
     </section>
 
