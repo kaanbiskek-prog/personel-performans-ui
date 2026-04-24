@@ -33,11 +33,10 @@
     </div>
 
     <div class="tabs">
-      <button class="tab active" data-tab="home" id="tabHome">Ana Sayfa</button>
-      <button class="tab" data-tab="daily" id="tabDaily">Günlük Değerlendirme</button>
-      <button class="tab" data-tab="employees" id="tabEmployees">Çalışanlar</button>
-      <button class="tab" data-tab="review" id="tabReview">İnceleme</button>
-      <button class="tab" data-tab="reports" id="tabReports">Raporlar</button>
+      <button class="tab active" data-tab="home">Ana Sayfa</button>
+      <button class="tab" data-tab="daily">Günlük Değerlendirme</button>
+      <button class="tab" data-tab="employees">Çalışanlar</button>
+      <button class="tab" data-tab="reports">Raporlar</button>
     </div>
 
     <section class="card section active" id="home">
@@ -49,8 +48,8 @@
 
     <section class="card section" id="daily">
       <div class="section-head">
-        <h2>Toplu Günlük Değerlendirme</h2>
-        <div class="pill" id="criteriaCountPill">0 kriter</div>
+        <h2>Günlük Değerlendirme</h2>
+        <div class="pill">1–5 arası puan</div>
       </div>
 
       <div class="form-grid top-form-grid">
@@ -67,26 +66,149 @@
         </div>
       </div>
 
-      <div class="criteria-box">
-        <div class="criteria-box-head">
-          <div>
-            <h3>Kriterler</h3>
-            <p id="criteriaHelpText">Çalışan seçildiğinde tüm aktif kriterler burada açılır.</p>
-          </div>
-        </div>
+      <div class="criteria-card">
+        <div class="criteria-title">Kriter Puanları</div>
 
-        <div id="criteriaList" class="criteria-list">
-          <div class="empty-block">Henüz çalışan seçilmedi.</div>
+        <div class="criteria-list">
+          <div class="criteria-row">
+            <div class="criteria-name">Mesai disiplini</div>
+            <select class="criteria-score" data-criteria="Mesai disiplini">
+              <option value="">Puan seç</option>
+              <option value="1">1</option>
+              <option value="2">2</option>
+              <option value="3">3</option>
+              <option value="4">4</option>
+              <option value="5">5</option>
+            </select>
+          </div>
+
+          <div class="criteria-row">
+            <div class="criteria-name">İlk yanıt ve genel dönüş hızı</div>
+            <select class="criteria-score" data-criteria="İlk yanıt ve genel dönüş hızı">
+              <option value="">Puan seç</option>
+              <option value="1">1</option>
+              <option value="2">2</option>
+              <option value="3">3</option>
+              <option value="4">4</option>
+              <option value="5">5</option>
+            </select>
+          </div>
+
+          <div class="criteria-row">
+            <div class="criteria-name">Chat hızı ve operasyonel çeviklik</div>
+            <select class="criteria-score" data-criteria="Chat hızı ve operasyonel çeviklik">
+              <option value="">Puan seç</option>
+              <option value="1">1</option>
+              <option value="2">2</option>
+              <option value="3">3</option>
+              <option value="4">4</option>
+              <option value="5">5</option>
+            </select>
+          </div>
+
+          <div class="criteria-row">
+            <div class="criteria-name">Problem çözme başarısı</div>
+            <select class="criteria-score" data-criteria="Problem çözme başarısı">
+              <option value="">Puan seç</option>
+              <option value="1">1</option>
+              <option value="2">2</option>
+              <option value="3">3</option>
+              <option value="4">4</option>
+              <option value="5">5</option>
+            </select>
+          </div>
+
+          <div class="criteria-row">
+            <div class="criteria-name">İletişim kalitesi ve yazım düzeyi</div>
+            <select class="criteria-score" data-criteria="İletişim kalitesi ve yazım düzeyi">
+              <option value="">Puan seç</option>
+              <option value="1">1</option>
+              <option value="2">2</option>
+              <option value="3">3</option>
+              <option value="4">4</option>
+              <option value="5">5</option>
+            </select>
+          </div>
+
+          <div class="criteria-row">
+            <div class="criteria-name">Üye memnuniyeti ve kriz yönetimi</div>
+            <select class="criteria-score" data-criteria="Üye memnuniyeti ve kriz yönetimi">
+              <option value="">Puan seç</option>
+              <option value="1">1</option>
+              <option value="2">2</option>
+              <option value="3">3</option>
+              <option value="4">4</option>
+              <option value="5">5</option>
+            </select>
+          </div>
+
+          <div class="criteria-row">
+            <div class="criteria-name">Slack/grup iletişimi ve tutumu</div>
+            <select class="criteria-score" data-criteria="Slack/grup iletişimi ve tutumu">
+              <option value="">Puan seç</option>
+              <option value="1">1</option>
+              <option value="2">2</option>
+              <option value="3">3</option>
+              <option value="4">4</option>
+              <option value="5">5</option>
+            </select>
+          </div>
+
+          <div class="criteria-row">
+            <div class="criteria-name">Ekip içi uyum ve katkı</div>
+            <select class="criteria-score" data-criteria="Ekip içi uyum ve katkı">
+              <option value="">Puan seç</option>
+              <option value="1">1</option>
+              <option value="2">2</option>
+              <option value="3">3</option>
+              <option value="4">4</option>
+              <option value="5">5</option>
+            </select>
+          </div>
+
+          <div class="criteria-row">
+            <div class="criteria-name">Site ve sistem bilgisi (bonus bilgisi dahil)</div>
+            <select class="criteria-score" data-criteria="Site ve sistem bilgisi (bonus bilgisi dahil)">
+              <option value="">Puan seç</option>
+              <option value="1">1</option>
+              <option value="2">2</option>
+              <option value="3">3</option>
+              <option value="4">4</option>
+              <option value="5">5</option>
+            </select>
+          </div>
+
+          <div class="criteria-row">
+            <div class="criteria-name">Admin genel değerlendirme puanı</div>
+            <select class="criteria-score" data-criteria="Admin genel değerlendirme puanı">
+              <option value="">Puan seç</option>
+              <option value="1">1</option>
+              <option value="2">2</option>
+              <option value="3">3</option>
+              <option value="4">4</option>
+              <option value="5">5</option>
+            </select>
+          </div>
         </div>
       </div>
 
-      <div class="field full">
-        <label for="noteInput">Genel Not</label>
-        <textarea id="noteInput" rows="4" placeholder="Günlük genel gözlem / açıklama yaz..."></textarea>
+      <div class="form-grid">
+        <div class="field full">
+          <label for="noteInput">Not</label>
+          <textarea id="noteInput" rows="5" placeholder="Gözlem / açıklama yaz..."></textarea>
+        </div>
+
+        <div class="field full low-score-proof hidden" id="proofWrap">
+          <label for="proofFile">Düşük puan kanıtı (zorunlu)</label>
+          <input type="file" id="proofFile" accept="image/*,.pdf,.doc,.docx" />
+          <div class="helper-text">
+            Herhangi bir kriterde 1 veya 2 puan varsa belge / görsel yüklemek zorunludur.
+          </div>
+        </div>
       </div>
 
       <div class="actions">
-        <button class="primary-btn" id="saveBtn">Tümünü Kaydet</button>
+        <button class="primary-btn" id="saveBtn">Kaydet</button>
       </div>
     </section>
 
@@ -95,177 +217,7 @@
         <h2>Çalışanlar</h2>
         <div class="pill" id="employeeCountPill">0 kişi</div>
       </div>
-
-      <div class="employee-layout">
-        <div class="employee-side">
-          <div id="employeeList" class="employee-grid">
-            <div class="empty-block">Henüz personel yok.</div>
-          </div>
-        </div>
-
-        <div class="employee-side">
-          <div class="manage-card" id="managePersonnelCard">
-            <div class="manage-head">
-              <h3>Personel Yönetimi</h3>
-              <p class="muted-text">Buradan personel ekleyebilir, güncelleyebilir ve pasife alabilirsin.</p>
-            </div>
-
-            <div class="field">
-              <label for="personnelPicker">Mevcut personel</label>
-              <select id="personnelPicker">
-                <option value="">Yeni personel ekle</option>
-              </select>
-            </div>
-
-            <div class="form-grid">
-              <div class="field">
-                <label for="personnelNameInput">Ad Soyad</label>
-                <input type="text" id="personnelNameInput" placeholder="Örn: Emre Yılmaz" />
-              </div>
-
-              <div class="field">
-                <label for="personnelRoleSelect">Rol</label>
-                <select id="personnelRoleSelect">
-                  <option value="calisan">Çalışan</option>
-                  <option value="yonetici">Yönetici</option>
-                  <option value="admin">Admin</option>
-                </select>
-              </div>
-
-              <div class="field">
-                <label for="personnelActiveSelect">Durum</label>
-                <select id="personnelActiveSelect">
-                  <option value="true">Aktif</option>
-                  <option value="false">Pasif</option>
-                </select>
-              </div>
-
-              <div class="field">
-                <label for="personnelCanScoreSelect">Puan verebilir</label>
-                <select id="personnelCanScoreSelect">
-                  <option value="true">Evet</option>
-                  <option value="false">Hayır</option>
-                </select>
-              </div>
-
-              <div class="field">
-                <label for="personnelCanViewReportsSelect">Rapor görebilir</label>
-                <select id="personnelCanViewReportsSelect">
-                  <option value="true">Evet</option>
-                  <option value="false">Hayır</option>
-                </select>
-              </div>
-
-              <div class="field">
-                <label for="personnelTgIdInput">Telegram User ID</label>
-                <input type="text" id="personnelTgIdInput" placeholder="Örn: 7801726656" />
-              </div>
-
-              <div class="field full">
-                <label for="personnelTgUsernameInput">Telegram Username</label>
-                <input type="text" id="personnelTgUsernameInput" placeholder="Örn: kaanbm veya @kaanbm" />
-              </div>
-            </div>
-
-            <div class="small-info">
-              Not: Rolü <b>admin</b> veya <b>yonetici</b> olanlar “Çalışan seç” listesinde görünmez.
-            </div>
-
-            <div class="actions multi-actions">
-              <button class="primary-btn" id="personnelSaveBtn">Kaydet / Güncelle</button>
-              <button class="secondary-btn" id="personnelResetBtn">Formu Temizle</button>
-              <button class="danger-btn" id="personnelDeactivateBtn">Pasife Al</button>
-            </div>
-          </div>
-
-          <div class="manage-card locked-card hidden" id="managePersonnelLocked">
-            <h3>Personel Yönetimi</h3>
-            <div class="locked-note">
-              Bu alan sadece admin / yönetici yetkisi olan kullanıcıya açıktır.
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <section class="card section" id="review">
-      <div class="section-head">
-        <h2>İnceleme Kuyruğu</h2>
-        <div class="pill" id="reviewQueuePill">0 kayıt</div>
-      </div>
-
-      <div class="manage-card">
-        <div class="manage-head">
-          <h3>Yeni İnceleme Gönder</h3>
-          <p class="muted-text">
-            Yüklenen dosyalar açıklama ile birlikte Telegram inceleme grubuna iletilir.
-          </p>
-        </div>
-
-        <div class="form-grid">
-          <div class="field">
-            <label for="reviewType">Talep Türü</label>
-            <select id="reviewType">
-              <option value="Belge">Belge</option>
-              <option value="Ekran Görüntüsü">Ekran Görüntüsü</option>
-              <option value="Kimlik Kontrolü">Kimlik Kontrolü</option>
-              <option value="Finans İncelemesi">Finans İncelemesi</option>
-              <option value="Diğer">Diğer</option>
-            </select>
-          </div>
-
-          <div class="field">
-            <label for="reviewTarget">İlgili Kullanıcı / Kişi</label>
-            <input type="text" id="reviewTarget" placeholder="Örn: ali_bilge / Üye kullanıcı adı / Personel adı" />
-          </div>
-
-          <div class="field full">
-            <label for="reviewDescription">Açıklama</label>
-            <textarea id="reviewDescription" rows="4" placeholder="İnceleme notunu yaz..."></textarea>
-          </div>
-
-          <div class="field full">
-            <label for="reviewFiles">Dosya Yükle</label>
-            <input
-              type="file"
-              id="reviewFiles"
-              multiple
-              accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt,.csv"
-            />
-            <div class="file-hint" id="reviewFileInfo">
-              Maksimum 3 dosya. Her dosya en fazla 4 MB. Toplam en fazla 8 MB.
-            </div>
-          </div>
-        </div>
-
-        <div class="actions">
-          <button class="primary-btn" id="reviewSubmitBtn">İncelemeye Gönder</button>
-        </div>
-      </div>
-
-      <div class="table-card">
-        <div class="table-title">Son İnceleme Kayıtları</div>
-        <div class="table-wrap">
-          <table class="data-table">
-            <thead>
-              <tr>
-                <th>Talep No</th>
-                <th>Tür</th>
-                <th>İlgili Kişi</th>
-                <th>Dosya</th>
-                <th>Durum</th>
-                <th>Zaman</th>
-                <th>Gönderen</th>
-              </tr>
-            </thead>
-            <tbody id="reviewQueueBody">
-              <tr>
-                <td colspan="7" class="empty-td">Henüz inceleme kaydı yok.</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
+      <div id="employeeList" class="employee-grid"></div>
     </section>
 
     <section class="card section" id="reports">
@@ -277,28 +229,7 @@
       <div id="reportSummary" class="report-summary-grid"></div>
 
       <div class="table-card">
-        <div class="table-title">Çalışan Ortalama Tablosu</div>
-        <div class="table-wrap">
-          <table class="data-table">
-            <thead>
-              <tr>
-                <th>Çalışan</th>
-                <th>Bugün Ort.</th>
-                <th>Ay Ort.</th>
-                <th>Toplam Kayıt</th>
-              </tr>
-            </thead>
-            <tbody id="averageRowsBody">
-              <tr>
-                <td colspan="4" class="empty-td">Henüz veri yok.</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      <div class="table-card">
-        <div class="table-title">Son Kayıtlar</div>
+        <div class="table-title">Son kayıtlar</div>
         <div class="table-wrap">
           <table class="data-table">
             <thead>
