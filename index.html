@@ -36,6 +36,7 @@
       <button class="tab active" data-tab="home" id="tabHome">Ana Sayfa</button>
       <button class="tab" data-tab="daily" id="tabDaily">Günlük Değerlendirme</button>
       <button class="tab" data-tab="employees" id="tabEmployees">Çalışanlar</button>
+      <button class="tab" data-tab="review" id="tabReview">İnceleme</button>
       <button class="tab" data-tab="reports" id="tabReports">Raporlar</button>
     </div>
 
@@ -183,6 +184,86 @@
               Bu alan sadece admin / yönetici yetkisi olan kullanıcıya açıktır.
             </div>
           </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="card section" id="review">
+      <div class="section-head">
+        <h2>İnceleme Kuyruğu</h2>
+        <div class="pill" id="reviewQueuePill">0 kayıt</div>
+      </div>
+
+      <div class="manage-card">
+        <div class="manage-head">
+          <h3>Yeni İnceleme Gönder</h3>
+          <p class="muted-text">
+            Yüklenen dosyalar açıklama ile birlikte Telegram inceleme grubuna iletilir.
+          </p>
+        </div>
+
+        <div class="form-grid">
+          <div class="field">
+            <label for="reviewType">Talep Türü</label>
+            <select id="reviewType">
+              <option value="Belge">Belge</option>
+              <option value="Ekran Görüntüsü">Ekran Görüntüsü</option>
+              <option value="Kimlik Kontrolü">Kimlik Kontrolü</option>
+              <option value="Finans İncelemesi">Finans İncelemesi</option>
+              <option value="Diğer">Diğer</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label for="reviewTarget">İlgili Kullanıcı / Kişi</label>
+            <input type="text" id="reviewTarget" placeholder="Örn: ali_bilge / Üye kullanıcı adı / Personel adı" />
+          </div>
+
+          <div class="field full">
+            <label for="reviewDescription">Açıklama</label>
+            <textarea id="reviewDescription" rows="4" placeholder="İnceleme notunu yaz..."></textarea>
+          </div>
+
+          <div class="field full">
+            <label for="reviewFiles">Dosya Yükle</label>
+            <input
+              type="file"
+              id="reviewFiles"
+              multiple
+              accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt,.csv"
+            />
+            <div class="file-hint" id="reviewFileInfo">
+              Maksimum 3 dosya. Her dosya en fazla 4 MB. Toplam en fazla 8 MB.
+            </div>
+          </div>
+        </div>
+
+        <div class="actions">
+          <button class="primary-btn" id="reviewSubmitBtn">İncelemeye Gönder</button>
+        </div>
+      </div>
+
+      <div class="table-card">
+        <div class="table-title">Son İnceleme Kayıtları</div>
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Talep No</th>
+                <th>Tür</th>
+                <th>İlgili Kişi</th>
+                <th>Dosya</th>
+                <th>Durum</th>
+                <th>Zaman</th>
+                <th>Gönderen</th>
+              </tr>
+            </thead>
+            <tbody id="reviewQueueBody">
+              <tr>
+                <td colspan="7" class="empty-td">Henüz inceleme kaydı yok.</td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </div>
     </section>
