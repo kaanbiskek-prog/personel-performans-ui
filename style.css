@@ -475,3 +475,70 @@ textarea:focus {
     font-size: 16px;
   }
 }
+
+.status-line,
+.status-meta {
+  color: #cdd8ff;
+}
+
+.status-meta {
+  opacity: 0.85;
+  margin-top: 8px;
+}
+
+.employee-grid,
+.report-summary-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 14px;
+}
+
+.table-card {
+  margin-top: 18px;
+}
+
+.table-title {
+  font-size: 14px;
+  font-weight: 700;
+  margin-bottom: 10px;
+  color: #ffffff;
+}
+
+.table-wrap {
+  overflow-x: auto;
+  border: 1px solid rgba(122, 162, 255, 0.18);
+  border-radius: 18px;
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.data-table th,
+.data-table td {
+  padding: 12px 14px;
+  text-align: left;
+  border-bottom: 1px solid rgba(122, 162, 255, 0.12);
+  color: #dfe8ff;
+  font-size: 13px;
+  vertical-align: top;
+}
+
+.data-table th {
+  color: #ffffff;
+  font-weight: 700;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.empty-td {
+  text-align: center !important;
+  opacity: 0.8;
+}
+
+@media (min-width: 768px) {
+  .employee-grid,
+  .report-summary-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
