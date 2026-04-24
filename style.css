@@ -250,7 +250,7 @@ textarea {
 
 .criteria-item {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 180px;
+  grid-template-columns: minmax(0, 1fr) 220px;
   gap: 14px;
   align-items: center;
   padding: 16px;
@@ -294,29 +294,60 @@ textarea {
   margin-top: 18px;
   display: flex;
   justify-content: flex-start;
+  gap: 12px;
+  flex-wrap: wrap;
 }
 
-.primary-btn {
-  min-width: 220px;
-  min-height: 60px;
+.multi-actions {
+  margin-top: 18px;
+}
+
+.primary-btn,
+.secondary-btn,
+.danger-btn {
+  min-width: 200px;
+  min-height: 58px;
   border: 0;
   border-radius: 22px;
-  background: linear-gradient(135deg, var(--accent-2), #8eb6ff);
   color: #fff;
-  font-size: 18px;
+  font-size: 17px;
   font-weight: 900;
   cursor: pointer;
   transition: 0.2s ease;
 }
 
-.primary-btn:disabled {
+.primary-btn {
+  background: linear-gradient(135deg, var(--accent-2), #8eb6ff);
+}
+
+.secondary-btn {
+  background: linear-gradient(135deg, #3559b8, #6287e7);
+}
+
+.danger-btn {
+  background: linear-gradient(135deg, #d84f66, #ff7a8d);
+}
+
+.primary-btn:disabled,
+.secondary-btn:disabled,
+.danger-btn:disabled {
   opacity: 0.65;
   cursor: not-allowed;
 }
 
+.employee-layout {
+  display: grid;
+  grid-template-columns: 1.1fr 0.9fr;
+  gap: 18px;
+}
+
+.employee-side {
+  min-width: 0;
+}
+
 .employee-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: 1fr;
   gap: 16px;
 }
 
@@ -327,23 +358,67 @@ textarea {
   border: 1px solid rgba(102, 153, 255, 0.22);
 }
 
-.employee-order {
-  color: #9dbbff;
-  font-size: 14px;
-  font-weight: 800;
-  margin-bottom: 10px;
+.employee-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 12px;
 }
 
 .employee-name {
-  font-size: 18px;
+  font-size: 20px;
   font-weight: 900;
-  margin-bottom: 10px;
+}
+
+.role-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 800;
+  border: 1px solid rgba(255,255,255,0.22);
+  background: rgba(255,255,255,0.08);
+  white-space: nowrap;
 }
 
 .employee-meta {
   color: var(--muted);
   font-size: 15px;
+  line-height: 1.6;
+}
+
+.manage-card {
+  border-radius: 24px;
+  padding: 20px;
+  background: rgba(18, 40, 100, 0.86);
+  border: 1px solid rgba(102, 153, 255, 0.22);
+}
+
+.manage-head {
+  margin-bottom: 16px;
+}
+
+.muted-text {
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.small-info {
+  margin-top: 12px;
+  color: var(--muted);
+  font-size: 14px;
   line-height: 1.5;
+}
+
+.locked-card {
+  display: block;
+}
+
+.hidden {
+  display: none !important;
 }
 
 .report-summary-grid {
@@ -421,12 +496,18 @@ textarea {
   color: #ffbaba;
   font-weight: 800;
   margin-top: 8px;
+  line-height: 1.5;
+}
+
+@media (max-width: 1080px) {
+  .employee-layout {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 980px) {
   .stats,
   .tabs,
-  .employee-grid,
   .report-summary-grid,
   .form-grid {
     grid-template-columns: 1fr;
@@ -437,7 +518,8 @@ textarea {
   }
 
   .section-head,
-  .topbar {
+  .topbar,
+  .employee-top {
     flex-direction: column;
     align-items: stretch;
   }
@@ -458,5 +540,12 @@ textarea {
 
   .stat .value {
     font-size: 50px;
+  }
+
+  .primary-btn,
+  .secondary-btn,
+  .danger-btn {
+    width: 100%;
+    min-width: 100%;
   }
 }
