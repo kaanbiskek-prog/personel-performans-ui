@@ -12,7 +12,8 @@ const STATE = {
   employees: [],
   allPersonnel: [],
   criteria: [],
-  reports: null
+  reports: null,
+  reviewQueue: []
 };
 
 const $ = (id) => document.getElementById(id);
@@ -128,8 +129,7 @@ async function apiGet(action, params = {}) {
     cache: "no-store"
   });
 
-  const data = await res.json();
-  return data;
+  return await res.json();
 }
 
 async function apiPost(payload) {
@@ -141,17 +141,18 @@ async function apiPost(payload) {
     body: JSON.stringify(payload)
   });
 
-  const data = await res.json();
-  return data;
+  return await res.json();
 }
 
 function renderPermissionUI() {
   const canScore = !!STATE.permissions.canScore;
   const canViewReports = !!STATE.permissions.canViewReports;
   const canManagePersonnel = !!STATE.permissions.canManagePersonnel;
+  const isKnownUser = !!STATE.permissions.isKnownUser;
 
   $("tabDaily").classList.toggle("hidden-tab", !canScore);
   $("tabReports").classList.toggle("hidden-tab", !canViewReports);
+  $("tabReview").classList.toggle("hidden-tab", !isKnownUser);
 
   $("managePersonnelCard").classList.toggle("hidden", !canManagePersonnel);
   $("managePersonnelLocked").classList.toggle("hidden", canManagePersonnel);
@@ -161,6 +162,10 @@ function renderPermissionUI() {
   }
 
   if (!canViewReports && document.querySelector('.tab.active[data-tab="reports"]')) {
+    switchTab("home");
+  }
+
+  if (!isKnownUser && document.querySelector('.tab.active[data-tab="review"]')) {
     switchTab("home");
   }
 }
@@ -396,6 +401,79 @@ function fillPersonnelForm(name) {
   $("personnelSaveBtn").dataset.originalName = person.name || "";
 }
 
+function renderReviewHistory() {
+  const body = $("reviewQueueBody");
+  const list = Array.isArray(STATE.reviewQueue) ? STATE.reviewQueue : [];
+
+  $("reviewQueuePill").textContent = `${list.length} kayıt`;
+
+  if (!list.length) {
+    body.innerHTML = `<tr><td colspan="7" class="empty-td">Henüz inceleme kaydı yok.</td></tr>`;
+    return;
+  }
+
+  body.innerHTML = list
+    .map(
+      (row) => `
+        <tr>
+          <td>${escapeHtml(row.requestNo || "-")}</td>
+          <td>${escapeHtml(row.type || "-")}</td>
+          <td>${escapeHtml(row.targetPerson || "-")}</td>
+          <td>${escapeHtml(row.fileNames || "-")}</td>
+          <td>${escapeHtml(row.status || "-")}</td>
+          <td>${escapeHtml(row.createdAt || "-")}</td>
+          <td>${escapeHtml(row.submittedBy || "-")}</td>
+        </tr>
+      `
+    )
+    .join("");
+}
+
+function updateReviewFileInfo() {
+  const input = $("reviewFiles");
+  const info = $("reviewFileInfo");
+  const files = Array.from(input.files || []);
+
+  if (!files.length) {
+    info.textContent = "Maksimum 3 dosya. Her dosya en fazla 4 MB. Toplam en fazla 8 MB.";
+    return;
+  }
+
+  const totalSize = files.reduce((sum, file) => sum + (file.size || 0), 0);
+  const totalMb = (totalSize / (1024 * 1024)).toFixed(2);
+  info.textContent = `${files.length} dosya seçildi • Toplam ${totalMb} MB`;
+}
+
+function clearReviewForm() {
+  $("reviewType").value = "Belge";
+  $("reviewTarget").value = "";
+  $("reviewDescription").value = "";
+  $("reviewFiles").value = "";
+  updateReviewFileInfo();
+}
+
+async function readFileAsBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+
+    reader.onload = () => {
+      const result = String(reader.result || "");
+      const commaIndex = result.indexOf(",");
+      const base64 = commaIndex >= 0 ? result.slice(commaIndex + 1) : result;
+
+      resolve({
+        name: file.name,
+        type: file.type || "application/octet-stream",
+        size: file.size || 0,
+        base64
+      });
+    };
+
+    reader.onerror = () => reject(new Error(`Dosya okunamadı: ${file.name}`));
+    reader.readAsDataURL(file);
+  });
+}
+
 async function loadBootstrap() {
   try {
     setStatus("Veriler yükleniyor...");
@@ -415,6 +493,7 @@ async function loadBootstrap() {
     STATE.allPersonnel = data.allPersonnel || [];
     STATE.criteria = data.criteria || [];
     STATE.reports = data.reports || null;
+    STATE.reviewQueue = data.reviewQueue || [];
 
     renderPermissionUI();
     renderStats();
@@ -423,13 +502,14 @@ async function loadBootstrap() {
     renderCriteriaInputs();
     renderReports();
     renderPersonnelPicker();
+    renderReviewHistory();
 
     if (!STATE.permissions.isKnownUser && STATE.tgUser?.id) {
       setStatus("Bu kullanıcı panelde tanımlı değil. Yöneticiden yetki tanımlaması iste.");
       return;
     }
 
-    if (!STATE.permissions.canScore && !STATE.permissions.canViewReports && !STATE.permissions.canManagePersonnel) {
+    if (!STATE.permissions.canScore && !STATE.permissions.canViewReports && !STATE.permissions.canManagePersonnel && !STATE.permissions.isKnownUser) {
       setStatus("Giriş yapıldı. Fakat bu kullanıcıya panel yetkisi tanımlı değil.");
       return;
     }
@@ -633,6 +713,85 @@ async function handlePersonnelDeactivate() {
   }
 }
 
+async function handleReviewSubmit() {
+  if (!STATE.permissions.isKnownUser) {
+    showAppAlert("Bu kullanıcı panelde tanımlı değil.");
+    return;
+  }
+
+  const type = $("reviewType").value.trim();
+  const target = $("reviewTarget").value.trim();
+  const description = $("reviewDescription").value.trim();
+  const files = Array.from($("reviewFiles").files || []);
+
+  if (!description) {
+    showAppAlert("Açıklama yaz.");
+    return;
+  }
+
+  if (!files.length) {
+    showAppAlert("En az bir dosya seç.");
+    return;
+  }
+
+  if (files.length > 3) {
+    showAppAlert("En fazla 3 dosya yükleyebilirsin.");
+    return;
+  }
+
+  const maxPerFile = 4 * 1024 * 1024;
+  const maxTotal = 8 * 1024 * 1024;
+  const totalSize = files.reduce((sum, file) => sum + (file.size || 0), 0);
+
+  for (const file of files) {
+    if ((file.size || 0) > maxPerFile) {
+      showAppAlert(`"${file.name}" 4 MB sınırını aşıyor.`);
+      return;
+    }
+  }
+
+  if (totalSize > maxTotal) {
+    showAppAlert("Toplam dosya boyutu 8 MB sınırını aşıyor.");
+    return;
+  }
+
+  const btn = $("reviewSubmitBtn");
+  const oldText = btn.textContent;
+
+  try {
+    btn.disabled = true;
+    btn.textContent = "Gönderiliyor...";
+
+    const encodedFiles = await Promise.all(files.map(readFileAsBase64));
+
+    const data = await apiPost({
+      action: "submitReview",
+      tgUserId: STATE.tgUser?.id || "",
+      tgUsername: STATE.tgUser?.username || "",
+      tgFullName: STATE.tgUser?.fullName || "",
+      reviewType: type,
+      targetPerson: target,
+      description,
+      files: encodedFiles
+    });
+
+    if (!data.ok) {
+      throw new Error(data.message || "İnceleme gönderilemedi");
+    }
+
+    showAppAlert(data.message || "İnceleme gönderildi.");
+    clearReviewForm();
+    await loadBootstrap();
+    switchTab("review");
+  } catch (err) {
+    console.error(err);
+    showAppAlert(`İnceleme gönderme hatası: ${err.message}`);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = oldText;
+  }
+}
+
 function setupEvents() {
   $("employeeSelect").addEventListener("change", renderCriteriaInputs);
   $("saveBtn").addEventListener("click", handleBatchSave);
@@ -654,6 +813,9 @@ function setupEvents() {
   $("personnelSaveBtn").addEventListener("click", handlePersonnelSave);
   $("personnelDeactivateBtn").addEventListener("click", handlePersonnelDeactivate);
   $("personnelResetBtn").addEventListener("click", clearPersonnelForm);
+
+  $("reviewFiles").addEventListener("change", updateReviewFileInfo);
+  $("reviewSubmitBtn").addEventListener("click", handleReviewSubmit);
 }
 
 document.addEventListener("DOMContentLoaded", async () => {
@@ -662,5 +824,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   initTelegramInfo();
   setupEvents();
   clearPersonnelForm();
+  clearReviewForm();
   await loadBootstrap();
 });
