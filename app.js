@@ -5,10 +5,12 @@ const STATE = {
   permissions: {
     isKnownUser: false,
     isAdmin: false,
+    canManagePersonnel: false,
     canScore: false,
     canViewReports: false
   },
   employees: [],
+  allPersonnel: [],
   criteria: [],
   reports: null
 };
@@ -98,6 +100,17 @@ function formatAvg(value) {
   return num.toFixed(2);
 }
 
+function boolToText(val) {
+  return val ? "Evet" : "Hayır";
+}
+
+function roleLabel(role) {
+  const r = String(role || "").toLowerCase();
+  if (r === "admin") return "Admin";
+  if (r === "yonetici") return "Yönetici";
+  return "Çalışan";
+}
+
 function setStatus(text) {
   $("statusText").textContent = text;
 }
@@ -135,9 +148,13 @@ async function apiPost(payload) {
 function renderPermissionUI() {
   const canScore = !!STATE.permissions.canScore;
   const canViewReports = !!STATE.permissions.canViewReports;
+  const canManagePersonnel = !!STATE.permissions.canManagePersonnel;
 
   $("tabDaily").classList.toggle("hidden-tab", !canScore);
   $("tabReports").classList.toggle("hidden-tab", !canViewReports);
+
+  $("managePersonnelCard").classList.toggle("hidden", !canManagePersonnel);
+  $("managePersonnelLocked").classList.toggle("hidden", canManagePersonnel);
 
   if (!canScore && document.querySelector('.tab.active[data-tab="daily"]')) {
     switchTab("home");
@@ -168,26 +185,31 @@ function renderEmployeeSelect() {
 
 function renderEmployees() {
   const wrap = $("employeeList");
-  $("employeeCountPill").textContent = `${STATE.employees.length} kişi`;
+  $("employeeCountPill").textContent = `${STATE.allPersonnel.length} kişi`;
 
-  if (!STATE.employees.length) {
-    wrap.innerHTML = `<div class="empty-block">Henüz çalışan yok.</div>`;
+  if (!STATE.allPersonnel.length) {
+    wrap.innerHTML = `<div class="empty-block">Henüz personel yok.</div>`;
     return;
   }
 
-  wrap.innerHTML = STATE.employees
-    .map(
-      (employee, index) => `
+  wrap.innerHTML = STATE.allPersonnel
+    .map((employee) => {
+      return `
         <div class="employee-card">
-          <div class="employee-order">#${index + 1}</div>
-          <div class="employee-name">${escapeHtml(employee.name)}</div>
+          <div class="employee-top">
+            <div class="employee-name">${escapeHtml(employee.name)}</div>
+            <div class="role-badge">${escapeHtml(roleLabel(employee.role))}</div>
+          </div>
           <div class="employee-meta">
-            Rol: ${escapeHtml(employee.role || "çalışan")}<br>
-            Durum: ${employee.active ? "Aktif" : "Pasif"}
+            Durum: ${employee.active ? "Aktif" : "Pasif"}<br>
+            Puan verebilir: ${boolToText(employee.canScore)}<br>
+            Rapor görebilir: ${boolToText(employee.canViewReports)}<br>
+            Telegram ID: ${escapeHtml(employee.tgUserId || "-")}<br>
+            Telegram Username: ${escapeHtml(employee.tgUsername ? "@" + employee.tgUsername : "-")}
           </div>
         </div>
-      `
-    )
+      `;
+    })
     .join("");
 }
 
@@ -316,6 +338,64 @@ function renderReports() {
   }
 }
 
+function renderPersonnelPicker() {
+  const picker = $("personnelPicker");
+  picker.innerHTML = `<option value="">Yeni personel ekle</option>`;
+
+  STATE.allPersonnel.forEach((person) => {
+    const option = document.createElement("option");
+    option.value = person.name;
+    option.textContent = `${person.name} (${roleLabel(person.role)})`;
+    picker.appendChild(option);
+  });
+}
+
+function clearPersonnelForm() {
+  $("personnelPicker").value = "";
+  $("personnelNameInput").value = "";
+  $("personnelRoleSelect").value = "calisan";
+  $("personnelActiveSelect").value = "true";
+  $("personnelCanScoreSelect").value = "false";
+  $("personnelCanViewReportsSelect").value = "false";
+  $("personnelTgIdInput").value = "";
+  $("personnelTgUsernameInput").value = "";
+  $("personnelSaveBtn").dataset.originalName = "";
+}
+
+function applyRoleDefaults(isCreateMode = false) {
+  const role = $("personnelRoleSelect").value;
+
+  if (role === "admin" || role === "yonetici") {
+    if (isCreateMode) {
+      $("personnelCanScoreSelect").value = "true";
+      $("personnelCanViewReportsSelect").value = "true";
+    }
+  }
+
+  if (role === "calisan" && isCreateMode) {
+    $("personnelCanScoreSelect").value = "false";
+    $("personnelCanViewReportsSelect").value = "false";
+  }
+}
+
+function fillPersonnelForm(name) {
+  const person = STATE.allPersonnel.find((p) => p.name === name);
+
+  if (!person) {
+    clearPersonnelForm();
+    return;
+  }
+
+  $("personnelNameInput").value = person.name || "";
+  $("personnelRoleSelect").value = person.role || "calisan";
+  $("personnelActiveSelect").value = person.active ? "true" : "false";
+  $("personnelCanScoreSelect").value = person.canScore ? "true" : "false";
+  $("personnelCanViewReportsSelect").value = person.canViewReports ? "true" : "false";
+  $("personnelTgIdInput").value = person.tgUserId || "";
+  $("personnelTgUsernameInput").value = person.tgUsername || "";
+  $("personnelSaveBtn").dataset.originalName = person.name || "";
+}
+
 async function loadBootstrap() {
   try {
     setStatus("Veriler yükleniyor...");
@@ -332,6 +412,7 @@ async function loadBootstrap() {
 
     STATE.permissions = data.permissions || STATE.permissions;
     STATE.employees = data.employees || [];
+    STATE.allPersonnel = data.allPersonnel || [];
     STATE.criteria = data.criteria || [];
     STATE.reports = data.reports || null;
 
@@ -341,18 +422,19 @@ async function loadBootstrap() {
     renderEmployeeSelect();
     renderCriteriaInputs();
     renderReports();
+    renderPersonnelPicker();
 
     if (!STATE.permissions.isKnownUser && STATE.tgUser?.id) {
       setStatus("Bu kullanıcı panelde tanımlı değil. Yöneticiden yetki tanımlaması iste.");
       return;
     }
 
-    if (!STATE.permissions.canScore && !STATE.permissions.canViewReports) {
+    if (!STATE.permissions.canScore && !STATE.permissions.canViewReports && !STATE.permissions.canManagePersonnel) {
       setStatus("Giriş yapıldı. Fakat bu kullanıcıya panel yetkisi tanımlı değil.");
       return;
     }
 
-    setStatus("Sistem hazır. Toplu puanlama aktif.");
+    setStatus("Sistem hazır.");
   } catch (err) {
     setStatus(`Yükleme hatası: ${err.message}`);
     console.error(err);
@@ -445,9 +527,133 @@ async function handleBatchSave() {
   }
 }
 
+async function handlePersonnelSave() {
+  if (!STATE.permissions.canManagePersonnel) {
+    showAppAlert("Bu alan için yetkin yok.");
+    return;
+  }
+
+  const btn = $("personnelSaveBtn");
+  const oldText = btn.textContent;
+
+  const originalName = (btn.dataset.originalName || "").trim();
+  const name = $("personnelNameInput").value.trim();
+  const role = $("personnelRoleSelect").value.trim();
+  const active = $("personnelActiveSelect").value === "true";
+  const canScore = $("personnelCanScoreSelect").value === "true";
+  const canViewReports = $("personnelCanViewReportsSelect").value === "true";
+  const tgUserId = $("personnelTgIdInput").value.trim();
+  const tgUsername = $("personnelTgUsernameInput").value.trim().replace(/^@/, "");
+
+  if (!name) {
+    showAppAlert("Ad Soyad boş olamaz.");
+    return;
+  }
+
+  try {
+    btn.disabled = true;
+    btn.textContent = "Kaydediliyor...";
+
+    const data = await apiPost({
+      action: "upsertPersonnel",
+      tgUserId: STATE.tgUser?.id || "",
+      tgUsername: STATE.tgUser?.username || "",
+      tgFullName: STATE.tgUser?.fullName || "",
+      originalName,
+      personnel: {
+        name,
+        role,
+        active,
+        canScore,
+        canViewReports,
+        tgUserId,
+        tgUsername
+      }
+    });
+
+    if (!data.ok) {
+      throw new Error(data.message || "Personel kaydedilemedi");
+    }
+
+    showAppAlert(data.message || "Personel kaydedildi.");
+    clearPersonnelForm();
+    await loadBootstrap();
+  } catch (err) {
+    console.error(err);
+    showAppAlert(`Personel kaydetme hatası: ${err.message}`);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = oldText;
+  }
+}
+
+async function handlePersonnelDeactivate() {
+  if (!STATE.permissions.canManagePersonnel) {
+    showAppAlert("Bu alan için yetkin yok.");
+    return;
+  }
+
+  const originalName = ($("personnelSaveBtn").dataset.originalName || "").trim();
+  const currentName = $("personnelNameInput").value.trim();
+  const targetName = originalName || currentName;
+
+  if (!targetName) {
+    showAppAlert("Pasife alınacak personeli seç.");
+    return;
+  }
+
+  const btn = $("personnelDeactivateBtn");
+  const oldText = btn.textContent;
+
+  try {
+    btn.disabled = true;
+    btn.textContent = "Pasife alınıyor...";
+
+    const data = await apiPost({
+      action: "deactivatePersonnel",
+      tgUserId: STATE.tgUser?.id || "",
+      tgUsername: STATE.tgUser?.username || "",
+      tgFullName: STATE.tgUser?.fullName || "",
+      targetName
+    });
+
+    if (!data.ok) {
+      throw new Error(data.message || "Pasife alma başarısız");
+    }
+
+    showAppAlert(data.message || "Personel pasife alındı.");
+    clearPersonnelForm();
+    await loadBootstrap();
+  } catch (err) {
+    console.error(err);
+    showAppAlert(`Pasife alma hatası: ${err.message}`);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = oldText;
+  }
+}
+
 function setupEvents() {
   $("employeeSelect").addEventListener("change", renderCriteriaInputs);
   $("saveBtn").addEventListener("click", handleBatchSave);
+
+  $("personnelPicker").addEventListener("change", (e) => {
+    const value = e.target.value;
+    if (!value) {
+      clearPersonnelForm();
+      return;
+    }
+    fillPersonnelForm(value);
+  });
+
+  $("personnelRoleSelect").addEventListener("change", () => {
+    const isCreateMode = !($("personnelSaveBtn").dataset.originalName || "").trim();
+    applyRoleDefaults(isCreateMode);
+  });
+
+  $("personnelSaveBtn").addEventListener("click", handlePersonnelSave);
+  $("personnelDeactivateBtn").addEventListener("click", handlePersonnelDeactivate);
+  $("personnelResetBtn").addEventListener("click", clearPersonnelForm);
 }
 
 document.addEventListener("DOMContentLoaded", async () => {
@@ -455,5 +661,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   setToday();
   initTelegramInfo();
   setupEvents();
+  clearPersonnelForm();
   await loadBootstrap();
 });
