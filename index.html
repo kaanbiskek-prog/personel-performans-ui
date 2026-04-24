@@ -47,7 +47,12 @@
     </section>
 
     <section class="card section" id="daily">
-      <h2>Günlük Değerlendirme</h2>
+      <div class="section-head">
+        <h2>Günlük Değerlendirme</h2>
+        <div class="pill">Sadece yetkili kullanıcı</div>
+      </div>
+
+      <div class="status-meta" id="dailyAccessNote" style="display:none; margin-bottom:16px;"></div>
 
       <div class="form-grid">
         <div class="field">
@@ -85,10 +90,16 @@
           <label for="noteInput">Not</label>
           <textarea id="noteInput" rows="5" placeholder="Açıklama / gözlem yaz..."></textarea>
         </div>
+
+        <div class="field full">
+          <label for="reviewFile">Belge / ekran görüntüsü</label>
+          <input type="file" id="reviewFile" accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.zip" />
+        </div>
       </div>
 
       <div class="actions">
         <button class="primary-btn" id="saveBtn">Kaydet</button>
+        <button class="primary-btn" id="reviewBtn">İnceleme Kuyruğuna Gönder</button>
       </div>
     </section>
 
@@ -97,7 +108,65 @@
         <h2>Çalışanlar</h2>
         <div class="pill" id="employeeCountPill">0 kişi</div>
       </div>
+
+      <div id="adminPanels" style="display:none;">
+        <div class="card section" style="margin-bottom:18px;">
+          <h2>Çalışan Ekle</h2>
+          <div class="form-grid">
+            <div class="field">
+              <label for="employeeNameInput">Ad Soyad</label>
+              <input type="text" id="employeeNameInput" placeholder="Örn: Emre Yılmaz" />
+            </div>
+            <div class="field">
+              <label for="employeeRoleInput">Görev</label>
+              <input type="text" id="employeeRoleInput" placeholder="Örn: Admin / Destek / Operasyon" />
+            </div>
+          </div>
+          <div class="actions">
+            <button class="primary-btn" id="addEmployeeBtn">Çalışanı Kaydet</button>
+          </div>
+        </div>
+
+        <div class="card section" style="margin-bottom:18px;">
+          <h2>Yetkili Kullanıcı Ekle</h2>
+          <div class="form-grid">
+            <div class="field">
+              <label for="authTelegramIdInput">Telegram ID</label>
+              <input type="text" id="authTelegramIdInput" placeholder="Örn: 7801726656" />
+            </div>
+            <div class="field">
+              <label for="authFullNameInput">Ad Soyad</label>
+              <input type="text" id="authFullNameInput" placeholder="Örn: Kaan Yıldız" />
+            </div>
+            <div class="field">
+              <label for="authUsernameInput">Kullanıcı adı</label>
+              <input type="text" id="authUsernameInput" placeholder="Örn: kaanbm" />
+            </div>
+            <div class="field">
+              <label for="authRoleSelect">Rol</label>
+              <select id="authRoleSelect">
+                <option value="scorer">Scorer</option>
+                <option value="viewer">Viewer</option>
+                <option value="manager">Manager</option>
+                <option value="admin">Admin</option>
+              </select>
+            </div>
+          </div>
+          <div class="actions">
+            <button class="primary-btn" id="saveAuthUserBtn">Yetkiliyi Kaydet</button>
+          </div>
+        </div>
+      </div>
+
       <div id="employeeList" class="employee-grid"></div>
+
+      <div id="authUserWrap" style="display:none; margin-top:24px;">
+        <div class="section-head">
+          <h2>Yetkili Kullanıcılar</h2>
+          <div class="pill" id="authCountPill">0 kişi</div>
+        </div>
+        <div id="authUserList" class="employee-grid"></div>
+      </div>
     </section>
 
     <section class="card section" id="reports">
