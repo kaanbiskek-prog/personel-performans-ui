@@ -33,11 +33,10 @@
     </div>
 
     <div class="tabs">
-      <button class="tab active" data-tab="home">Ana Sayfa</button>
-      <button class="tab hidden" id="tabDaily" data-tab="daily">Günlük Değerlendirme</button>
-      <button class="tab" data-tab="employees">Çalışanlar</button>
-      <button class="tab hidden" id="tabReports" data-tab="reports">Raporlar</button>
-      <button class="tab hidden" id="tabManagement" data-tab="management">Yönetim</button>
+      <button class="tab active" data-tab="home" id="tabHome">Ana Sayfa</button>
+      <button class="tab" data-tab="daily" id="tabDaily">Günlük Değerlendirme</button>
+      <button class="tab" data-tab="employees" id="tabEmployees">Çalışanlar</button>
+      <button class="tab" data-tab="reports" id="tabReports">Raporlar</button>
     </div>
 
     <section class="card section active" id="home">
@@ -49,11 +48,11 @@
 
     <section class="card section" id="daily">
       <div class="section-head">
-        <h2>Günlük Değerlendirme</h2>
-        <div class="pill">Tek seferde tüm kriter</div>
+        <h2>Toplu Günlük Değerlendirme</h2>
+        <div class="pill" id="criteriaCountPill">0 kriter</div>
       </div>
 
-      <div class="form-grid">
+      <div class="form-grid top-form-grid">
         <div class="field">
           <label for="scoreDate">Tarih</label>
           <input type="date" id="scoreDate" />
@@ -65,16 +64,24 @@
             <option value="">Çalışan seç</option>
           </select>
         </div>
+      </div>
 
-        <div class="field full">
-          <label for="noteInput">Genel not</label>
-          <textarea id="noteInput" rows="4" placeholder="Bugünkü genel gözlem / açıklama..."></textarea>
+      <div class="criteria-box">
+        <div class="criteria-box-head">
+          <div>
+            <h3>Kriterler</h3>
+            <p id="criteriaHelpText">Çalışan seçildiğinde tüm aktif kriterler burada açılır.</p>
+          </div>
+        </div>
+
+        <div id="criteriaList" class="criteria-list">
+          <div class="empty-block">Henüz çalışan seçilmedi.</div>
         </div>
       </div>
 
-      <div class="criteria-block">
-        <div class="criteria-title">Kriter Puanları</div>
-        <div id="criteriaList" class="criteria-list"></div>
+      <div class="field full">
+        <label for="noteInput">Genel Not</label>
+        <textarea id="noteInput" rows="4" placeholder="Günlük genel gözlem / açıklama yaz..."></textarea>
       </div>
 
       <div class="actions">
@@ -87,7 +94,10 @@
         <h2>Çalışanlar</h2>
         <div class="pill" id="employeeCountPill">0 kişi</div>
       </div>
-      <div id="employeeList" class="employee-grid"></div>
+
+      <div id="employeeList" class="employee-grid">
+        <div class="empty-block">Henüz çalışan yok.</div>
+      </div>
     </section>
 
     <section class="card section" id="reports">
@@ -99,19 +109,20 @@
       <div id="reportSummary" class="report-summary-grid"></div>
 
       <div class="table-card">
-        <div class="table-title">Aylık çalışan ortalamaları</div>
+        <div class="table-title">Çalışan Ortalama Tablosu</div>
         <div class="table-wrap">
           <table class="data-table">
             <thead>
               <tr>
                 <th>Çalışan</th>
-                <th>Kayıt Sayısı</th>
-                <th>Ortalama</th>
+                <th>Bugün Ort.</th>
+                <th>Ay Ort.</th>
+                <th>Toplam Kayıt</th>
               </tr>
             </thead>
-            <tbody id="employeeAveragesBody">
+            <tbody id="averageRowsBody">
               <tr>
-                <td colspan="3" class="empty-td">Henüz veri yok.</td>
+                <td colspan="4" class="empty-td">Henüz veri yok.</td>
               </tr>
             </tbody>
           </table>
@@ -119,7 +130,7 @@
       </div>
 
       <div class="table-card">
-        <div class="table-title">Son kayıtlar</div>
+        <div class="table-title">Son Kayıtlar</div>
         <div class="table-wrap">
           <table class="data-table">
             <thead>
@@ -141,67 +152,8 @@
         </div>
       </div>
     </section>
-
-    <section class="card section" id="management">
-      <div class="section-head">
-        <h2>Yönetim</h2>
-        <div class="pill">Sadece Admin</div>
-      </div>
-
-      <div class="manager-grid">
-        <div class="table-card">
-          <div class="table-title">Personel Ekle / Düzenle</div>
-
-          <input type="hidden" id="managerPersonId" />
-
-          <div class="form-grid">
-            <div class="field">
-              <label for="managerFullName">Ad Soyad</label>
-              <input type="text" id="managerFullName" placeholder="Örn: Emre Yılmaz" />
-            </div>
-
-            <div class="field">
-              <label for="managerRole">Rol</label>
-              <select id="managerRole">
-                <option value="Calisan">Çalışan</option>
-                <option value="Yonetici">Yönetici</option>
-                <option value="Admin">Admin</option>
-              </select>
-            </div>
-
-            <div class="field">
-              <label for="managerActive">Durum</label>
-              <select id="managerActive">
-                <option value="true">Aktif</option>
-                <option value="false">Pasif</option>
-              </select>
-            </div>
-
-            <div class="field">
-              <label for="managerTelegramId">Telegram User ID</label>
-              <input type="text" id="managerTelegramId" placeholder="Örn: 7801726656" />
-            </div>
-
-            <div class="field">
-              <label for="managerTelegramUsername">Telegram Username</label>
-              <input type="text" id="managerTelegramUsername" placeholder="Örn: kaanbm" />
-            </div>
-          </div>
-
-          <div class="actions">
-            <button class="primary-btn" id="savePersonBtn">Kaydet</button>
-            <button class="secondary-btn" id="resetPersonBtn">Temizle</button>
-          </div>
-        </div>
-
-        <div class="table-card">
-          <div class="table-title">Personel Listesi</div>
-          <div id="managementList" class="management-list"></div>
-        </div>
-      </div>
-    </section>
   </div>
 
-  <script src="app.js?v=20260424-01"></script>
+  <script src="app.js"></script>
 </body>
 </html>
