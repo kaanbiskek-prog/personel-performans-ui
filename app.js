@@ -1,354 +1,423 @@
-const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyBmT4GrkMfU0sF_oIPkXMEWvLBgv3C__kg18R2Ji-Hgq3xdx_8Z-435ZTV4H9dd8rJ/exec";
-
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyBmT4GrkMfU0sF_oIPkXMEWvLBgv3C__kg18R2Ji-Hgq3xdx_8Z-435ZTV4H9dd8rJ/exec";
 const $ = (id) => document.getElementById(id);
-const state = {
+
+const APP = {
   tgUser: null,
-  currentUser: null,
-  permissions: {
-    isKnownUser: false,
-    canManageEmployees: false,
-    canScore: false,
-    canViewReports: false,
-  },
-  employees: [],
-  rateableEmployees: [],
-  criteria: [],
-  records: [],
+  data: null
 };
 
 function switchTab(tabId) {
-  document.querySelectorAll('.tab').forEach((btn) => {
-    btn.classList.toggle('active', btn.dataset.tab === tabId);
+  document.querySelectorAll(".tab").forEach((btn) => {
+    btn.classList.toggle("active", btn.dataset.tab === tabId);
   });
 
-  document.querySelectorAll('.section').forEach((section) => {
-    section.classList.toggle('active', section.id === tabId);
+  document.querySelectorAll(".section").forEach((section) => {
+    section.classList.toggle("active", section.id === tabId);
   });
 }
 
 function setupTabs() {
-  document.querySelectorAll('.tab').forEach((btn) => {
-    btn.addEventListener('click', () => switchTab(btn.dataset.tab));
+  document.querySelectorAll(".tab").forEach((btn) => {
+    btn.addEventListener("click", () => switchTab(btn.dataset.tab));
   });
 }
 
 function setToday() {
-  const input = $('scoreDate');
+  const input = $("scoreDate");
   if (!input) return;
+
   const d = new Date();
   const yyyy = d.getFullYear();
-  const mm = String(d.getMonth() + 1).padStart(2, '0');
-  const dd = String(d.getDate()).padStart(2, '0');
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
   input.value = `${yyyy}-${mm}-${dd}`;
 }
 
-function initTelegramInfo() {
-  const tg = window.Telegram?.WebApp;
+function getTelegramUser() {
+  const tg = window.Telegram && window.Telegram.WebApp ? window.Telegram.WebApp : null;
+
   if (tg) {
     try {
       tg.ready();
       tg.expand();
-    } catch (_) {}
+    } catch (e) {}
   }
 
-  const user = tg?.initDataUnsafe?.user || null;
-  state.tgUser = user;
-
-  const fullName = user
-    ? [user.first_name, user.last_name].filter(Boolean).join(' ').trim() || 'Telegram Kullanıcısı'
-    : 'Tarayıcı Demo';
-  const username = user?.username ? `@${user.username}` : '@demo';
-  const userId = user?.id ? String(user.id) : '0';
-
-  if ($('userChip')) $('userChip').textContent = fullName;
-  if ($('userInfo')) $('userInfo').textContent = `Kullanıcı: ${fullName} | ${username} | ID: ${userId}`;
-  if ($('sourceInfo')) $('sourceInfo').textContent = user
-    ? 'Kaynak: Telegram Mini App'
-    : 'Kaynak: Tarayıcı testi / Telegram dışı açılış';
-  if ($('statusText')) $('statusText').textContent = 'Veriler yükleniyor...';
-}
-
-function getRequestUserPayload() {
-  const user = state.tgUser;
-  const fullName = user
-    ? [user.first_name, user.last_name].filter(Boolean).join(' ').trim() || 'Telegram Kullanıcısı'
-    : 'Tarayıcı Demo';
+  const user = tg && tg.initDataUnsafe ? tg.initDataUnsafe.user : null;
 
   return {
-    telegramUserId: user?.id ? String(user.id) : '',
-    telegramUsername: user?.username ? `@${user.username}` : '',
-    fullName,
+    id: user && user.id ? String(user.id) : "",
+    username: user && user.username ? `@${String(user.username).toLowerCase()}` : "@yok",
+    fullName: user
+      ? [user.first_name || "", user.last_name || ""].join(" ").trim()
+      : "Tarayici Demo",
+    isTelegram: !!user
   };
 }
 
-async function apiRequest(action, extra = {}) {
-  if (!WEB_APP_URL || WEB_APP_URL.includes('BURAYA_APPS_SCRIPT_WEB_APP_URL_YAPISTIR')) {
-    throw new Error('WEB_APP_URL boş. app.js içine Apps Script Web App URL yapıştırılmamış.');
+function getFallbackCurrentUser() {
+  const tgUser = APP.tgUser || getTelegramUser();
+
+  return {
+    name: tgUser.fullName || "Yetkisiz Kullanici",
+    fullName: tgUser.fullName || "Yetkisiz Kullanici",
+    role: "guest",
+    active: false,
+    canScore: false,
+    canSeeReports: false,
+    canManageEmployees: false,
+    telegramUserId: tgUser.id || "-",
+    telegramUsername: tgUser.username || "@yok",
+    isKnownUser: false
+  };
+}
+
+function setStatus(message) {
+  if ($("statusText")) {
+    $("statusText").textContent = message;
+  }
+}
+
+function setUserMeta(currentUser) {
+  const tgUser = APP.tgUser || getTelegramUser();
+  const userToShow = currentUser || getFallbackCurrentUser();
+
+  if ($("userChip")) {
+    $("userChip").textContent = userToShow.fullName || tgUser.fullName || "Kullanici";
   }
 
-  const payload = {
-    action,
-    ...getRequestUserPayload(),
-    ...extra,
-  };
+  if ($("userInfo")) {
+    $("userInfo").textContent =
+      `Kullanici: ${userToShow.fullName || "Bilinmiyor"} | ${userToShow.telegramUsername || "@yok"} | ID: ${userToShow.telegramUserId || "-"}`;
+  }
 
-  const res = await fetch(WEB_APP_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+  if ($("sourceInfo")) {
+    $("sourceInfo").textContent = tgUser.isTelegram
+      ? "Kaynak: Telegram Mini App"
+      : "Kaynak: Tarayici testi / Telegram disi acilis";
+  }
+}
+
+function safeArray(value) {
+  return Array.isArray(value) ? value : [];
+}
+
+function buildPayload(action, extra = {}) {
+  const tgUser = APP.tgUser || getTelegramUser();
+
+  return {
+    action,
+    telegramUserId: tgUser.id || "",
+    telegramUsername: tgUser.username || "@yok",
+    fullName: tgUser.fullName || "Bilinmiyor",
+    ...extra
+  };
+}
+
+async function callApi(action, extra = {}) {
+  const payload = buildPayload(action, extra);
+
+  const response = await fetch(APPS_SCRIPT_URL, {
+    method: "POST",
+    headers: {
+      "Content-Type": "text/plain;charset=utf-8"
+    },
     body: JSON.stringify(payload),
+    cache: "no-store"
   });
 
-  const json = await res.json();
+  const json = await response.json();
+
   if (!json.ok) {
-    throw new Error(json.error || 'Bilinmeyen sunucu hatası');
+    throw new Error(json.error || "Bilinmeyen API hatasi");
   }
+
   return json;
 }
 
-function normalizeBootstrap(data) {
-  const safeCurrentUser = data?.currentUser || {
-    isKnownUser: false,
-    name: 'Yetkisiz Kullanıcı',
-    username: '@yok',
-    telegramUserId: '-',
-    role: 'ziyaretci',
-    permissions: {
-      isKnownUser: false,
-      canManageEmployees: false,
-      canScore: false,
-      canViewReports: false,
-    },
-  };
-
-  const safePermissions = safeCurrentUser.permissions || data?.permissions || {
-    isKnownUser: false,
-    canManageEmployees: false,
-    canScore: false,
-    canViewReports: false,
-  };
-
-  state.currentUser = safeCurrentUser;
-  state.permissions = safePermissions;
-  state.employees = Array.isArray(data?.employees) ? data.employees : [];
-  state.rateableEmployees = Array.isArray(data?.rateableEmployees) ? data.rateableEmployees : [];
-  state.criteria = Array.isArray(data?.criteria) ? data.criteria : [];
-  state.records = Array.isArray(data?.records) ? data.records : [];
-
-  if ($('activeCount')) $('activeCount').textContent = String(data?.activeCount || 0);
-  if ($('todayCount')) $('todayCount').textContent = String(data?.todayCount || 0);
-  if ($('lowScoreCount')) $('lowScoreCount').textContent = String(data?.lowScoreCount || 0);
-
-  if ($('statusText')) {
-    if (!safePermissions.isKnownUser) {
-      $('statusText').textContent = 'Yetkisiz kullanıcı. Önce Personel sheet içine seni admin/yönetici olarak eklemek gerekiyor.';
-    } else {
-      $('statusText').textContent = `Giriş başarılı. Rol: ${roleLabel(safeCurrentUser.role)}.`;
-    }
-  }
-
-  if ($('userInfo')) {
-    $('userInfo').textContent = `Kullanıcı: ${safeCurrentUser.name} | ${safeCurrentUser.username || '@yok'} | ID: ${safeCurrentUser.telegramUserId || '-'}`;
-  }
-
-  fillEmployeeSelect();
-  fillCriteriaSelect();
-  renderEmployees();
-  renderReports();
-  applyPermissionsToUI();
+function renderStats(stats = {}) {
+  if ($("activeCount")) $("activeCount").textContent = Number(stats.activeEmployees || 0);
+  if ($("todayCount")) $("todayCount").textContent = Number(stats.todayCount || 0);
+  if ($("lowScoreCount")) $("lowScoreCount").textContent = Number(stats.lowScoreCount || 0);
 }
 
-function roleLabel(role) {
-  if (role === 'admin') return 'Admin';
-  if (role === 'yonetici') return 'Yönetici';
-  if (role === 'calisan') return 'Çalışan';
-  return 'Ziyaretçi';
-}
-
-function fillEmployeeSelect() {
-  const select = $('employeeSelect');
+function renderEmployeeSelect(employees) {
+  const select = $("employeeSelect");
   if (!select) return;
 
-  select.innerHTML = '<option value="">Çalışan seç</option>';
-  state.rateableEmployees.forEach((employee) => {
-    const opt = document.createElement('option');
-    opt.value = employee.name;
-    opt.textContent = employee.name;
+  const list = safeArray(employees);
+
+  select.innerHTML = `<option value="">Calisan sec</option>`;
+
+  list.forEach((item) => {
+    const opt = document.createElement("option");
+    opt.value = item.name;
+    opt.textContent = item.name;
     select.appendChild(opt);
   });
 }
 
-function fillCriteriaSelect() {
-  const select = $('criteriaSelect');
+function renderCriteriaSelect(criteria) {
+  const select = $("criteriaSelect");
   if (!select) return;
 
-  select.innerHTML = '<option value="">Kriter seç</option>';
-  state.criteria.forEach((criteria) => {
-    const opt = document.createElement('option');
-    opt.value = criteria.name;
-    opt.textContent = criteria.name;
+  const list = safeArray(criteria);
+
+  select.innerHTML = `<option value="">Kriter sec</option>`;
+
+  list.forEach((item) => {
+    const opt = document.createElement("option");
+    opt.value = item.name;
+    opt.textContent = item.name;
     select.appendChild(opt);
   });
 }
 
-function renderEmployees() {
-  const wrap = $('employeeList');
-  const pill = $('employeeCountPill');
+function renderEmployees(employees) {
+  const wrap = $("employeeList");
+  const pill = $("employeeCountPill");
   if (!wrap) return;
 
-  const visibleEmployees = state.rateableEmployees;
-  if (pill) pill.textContent = `${visibleEmployees.length} kişi`;
+  const list = safeArray(employees).filter((item) => item.active);
 
-  if (!visibleEmployees.length) {
-    wrap.innerHTML = '<div class="empty-box">Henüz çalışan yok.</div>';
+  if (pill) {
+    pill.textContent = `${list.length} kisi`;
+  }
+
+  if (!list.length) {
+    wrap.innerHTML = `
+      <div class="empty-box">
+        Henuz calisan yok.
+      </div>
+    `;
     return;
   }
 
-  wrap.innerHTML = visibleEmployees.map((employee, index) => `
-    <div class="employee-card">
-      <div class="employee-order">#${index + 1}</div>
-      <div class="employee-name">${escapeHtml(employee.name)}</div>
-      <div class="employee-meta">Rol: ${roleLabel(employee.role)}</div>
-      <div class="employee-meta">Durum: ${employee.active ? 'Aktif' : 'Pasif'}</div>
-    </div>
-  `).join('');
+  wrap.innerHTML = list.map((item, index) => {
+    return `
+      <div class="employee-card">
+        <div class="employee-order">#${index + 1}</div>
+        <div class="employee-name">${escapeHtml(item.name)}</div>
+        <div class="employee-meta">Rol: ${escapeHtml(item.role)}</div>
+        <div class="employee-meta">Durum: ${item.active ? "Aktif" : "Pasif"}</div>
+      </div>
+    `;
+  }).join("");
 }
 
-function renderReports() {
-  const body = $('recentRecordsBody');
-  const pill = $('reportCountPill');
-  const summary = $('reportSummary');
-  if (pill) pill.textContent = `${state.records.length} kayıt`;
+function averageFromRecords(records) {
+  if (!records.length) return "0.00";
+  const total = records.reduce((sum, item) => sum + Number(item.score || 0), 0);
+  return (total / records.length).toFixed(2);
+}
 
-  if (summary) {
-    const avg = state.records.length
-      ? (state.records.reduce((sum, r) => sum + Number(r.score || 0), 0) / state.records.length).toFixed(2)
-      : '0.00';
+function currentMonthKey() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+}
 
-    summary.innerHTML = `
-      <div class="summary-card"><div class="summary-label">Toplam kayıt</div><div class="summary-value">${state.records.length}</div></div>
-      <div class="summary-card"><div class="summary-label">Ortalama puan</div><div class="summary-value">${avg}</div></div>
-      <div class="summary-card"><div class="summary-label">Düşük puan</div><div class="summary-value">${state.records.filter(r => Number(r.score) <= 2).length}</div></div>
+function renderReports(records, canSeeReports) {
+  const summaryWrap = $("reportSummary");
+  const tbody = $("recentRecordsBody");
+  const pill = $("reportCountPill");
+  const tabBtn = document.querySelector('.tab[data-tab="reports"]');
+  const reportsSection = $("reports");
+
+  if (tabBtn) {
+    tabBtn.style.display = canSeeReports ? "" : "none";
+  }
+
+  if (reportsSection) {
+    reportsSection.style.display = canSeeReports ? "" : "none";
+  }
+
+  if (!canSeeReports) {
+    if (summaryWrap) summaryWrap.innerHTML = "";
+    if (tbody) {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="6" class="empty-td">Rapor goruntuleme yetkin yok.</td>
+        </tr>
+      `;
+    }
+    return;
+  }
+
+  const list = safeArray(records);
+  const monthPrefix = currentMonthKey();
+  const monthRecords = list.filter((item) => String(item.date || "").startsWith(monthPrefix));
+
+  if (pill) {
+    pill.textContent = `${list.length} kayit`;
+  }
+
+  if (summaryWrap) {
+    summaryWrap.innerHTML = `
+      <div class="summary-card">
+        <div class="summary-label">Toplam kayit</div>
+        <div class="summary-value">${list.length}</div>
+      </div>
+      <div class="summary-card">
+        <div class="summary-label">Genel ortalama</div>
+        <div class="summary-value">${averageFromRecords(list)}</div>
+      </div>
+      <div class="summary-card">
+        <div class="summary-label">Bu ay ortalama</div>
+        <div class="summary-value">${averageFromRecords(monthRecords)}</div>
+      </div>
     `;
   }
 
-  if (!body) return;
+  if (!tbody) return;
 
-  if (!state.records.length) {
-    body.innerHTML = '<tr><td colspan="6" class="empty-td">Henüz kayıt yok.</td></tr>';
+  if (!list.length) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="6" class="empty-td">Henuz kayit yok.</td>
+      </tr>
+    `;
     return;
   }
 
-  const rows = [...state.records].slice(-20).reverse();
-  body.innerHTML = rows.map((r) => `
-    <tr>
-      <td>${escapeHtml(r.date || '')}</td>
-      <td>${escapeHtml(r.employeeName || '')}</td>
-      <td>${escapeHtml(r.criteria || '')}</td>
-      <td>${escapeHtml(String(r.score || ''))}</td>
-      <td>${escapeHtml(r.note || '')}</td>
-      <td>${escapeHtml(r.fullName || '')}</td>
-    </tr>
-  `).join('');
+  tbody.innerHTML = list.slice(0, 25).map((item) => {
+    return `
+      <tr>
+        <td>${escapeHtml(item.date || "")}</td>
+        <td>${escapeHtml(item.employeeName || "")}</td>
+        <td>${escapeHtml(item.criteria || "")}</td>
+        <td>${escapeHtml(String(item.score || ""))}</td>
+        <td>${escapeHtml(item.note || "")}</td>
+        <td>${escapeHtml(item.fullName || "")}</td>
+      </tr>
+    `;
+  }).join("");
 }
 
-function applyPermissionsToUI() {
-  const canScore = !!state.permissions?.canScore;
-  const canViewReports = !!state.permissions?.canViewReports;
+function applyPermissions(currentUser) {
+  const canScore = !!(currentUser && currentUser.canScore);
+  const canSeeReports = !!(currentUser && currentUser.canSeeReports);
 
-  const saveBtn = $('saveBtn');
-  if (saveBtn) saveBtn.disabled = !canScore;
-
-  const dailyTab = document.querySelector('.tab[data-tab="daily"]');
-  if (dailyTab) dailyTab.style.display = canScore ? '' : 'none';
-
-  const reportTab = document.querySelector('.tab[data-tab="reports"]');
-  if (reportTab) reportTab.style.display = canViewReports ? '' : 'none';
-
-  if (!canScore && document.querySelector('.tab.active')?.dataset?.tab === 'daily') {
-    switchTab('home');
+  const saveBtn = $("saveBtn");
+  if (saveBtn) {
+    saveBtn.disabled = !canScore;
+    saveBtn.textContent = canScore ? "Kaydet" : "Yetki yok";
   }
-  if (!canViewReports && document.querySelector('.tab.active')?.dataset?.tab === 'reports') {
-    switchTab('home');
+
+  renderReports(APP.data && APP.data.records ? APP.data.records : [], canSeeReports);
+
+  if (!canSeeReports && document.querySelector('.tab.active[data-tab="reports"]')) {
+    switchTab("home");
   }
 }
 
-function setupSaveButton() {
-  const btn = $('saveBtn');
-  if (!btn) return;
+function renderAll() {
+  const data = APP.data || {};
+  const currentUser = data.currentUser || getFallbackCurrentUser();
 
-  btn.addEventListener('click', async () => {
-    try {
-      if (!state.permissions?.canScore) {
-        alert('Puan verme yetkin yok.');
-        return;
-      }
+  setUserMeta(currentUser);
+  renderStats(data.stats || {});
+  renderEmployeeSelect(data.scoringEmployees || []);
+  renderCriteriaSelect(data.criteria || []);
+  renderEmployees(data.employees || []);
+  applyPermissions(currentUser);
 
-      const date = $('scoreDate')?.value || '';
-      const employeeName = $('employeeSelect')?.value || '';
-      const criteria = $('criteriaSelect')?.value || '';
-      const score = $('scoreSelect')?.value || '';
-      const note = $('noteInput')?.value?.trim() || '';
-
-      if (!date || !employeeName || !criteria || !score) {
-        alert('Tarih, çalışan, kriter ve puan zorunlu.');
-        return;
-      }
-
-      btn.disabled = true;
-      btn.textContent = 'Kaydediliyor...';
-
-      const response = await apiRequest('saveScore', {
-        date,
-        employeeName,
-        note,
-        criteriaItems: [{ criteria, score: Number(score) }],
-      });
-
-      normalizeBootstrap(response.data);
-      $('scoreSelect').value = '';
-      $('criteriaSelect').value = '';
-      $('noteInput').value = '';
-      switchTab('home');
-      alert('Kayıt başarılı.');
-    } catch (err) {
-      alert(`Kaydetme hatası: ${err.message || err}`);
-    } finally {
-      btn.disabled = false;
-      btn.textContent = 'Kaydet';
-    }
-  });
+  if (!currentUser.isKnownUser) {
+    setStatus("Yetkin tanimli degil. Personel sheet'e eklenmen lazim.");
+  } else {
+    setStatus(`Sistem hazir. Giris yapan: ${currentUser.fullName}`);
+  }
 }
 
 async function loadBootstrap() {
   try {
-    const response = await apiRequest('bootstrap');
-    normalizeBootstrap(response.data);
-  } catch (err) {
-    console.error(err);
-    if ($('statusText')) {
-      $('statusText').textContent = `Yükleme hatası: ${err.message || err}`;
+    setStatus("Veriler yukleniyor...");
+    APP.tgUser = getTelegramUser();
+
+    const response = await callApi("bootstrap");
+    APP.data = response.data || {};
+
+    if (!APP.data.currentUser) {
+      APP.data.currentUser = getFallbackCurrentUser();
     }
 
-    const fallbackUser = getRequestUserPayload();
-    if ($('userInfo')) {
-      $('userInfo').textContent = `Kullanıcı: ${fallbackUser.fullName || 'Yetkisiz Kullanıcı'} | ${fallbackUser.telegramUsername || '@yok'} | ID: ${fallbackUser.telegramUserId || '-'}`;
-    }
+    renderAll();
+  } catch (err) {
+    const fallback = getFallbackCurrentUser();
+    setUserMeta(fallback);
+    setStatus(`Yukleme hatasi: ${err.message}`);
   }
 }
 
-function escapeHtml(value) {
-  return String(value ?? '')
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;')
-    .replaceAll("'", '&#39;');
+function escapeHtml(text) {
+  return String(text || "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
 }
 
-document.addEventListener('DOMContentLoaded', async () => {
+function bindSaveButton() {
+  const btn = $("saveBtn");
+  if (!btn) return;
+
+  btn.addEventListener("click", async () => {
+    const employeeName = $("employeeSelect") ? $("employeeSelect").value : "";
+    const criteria = $("criteriaSelect") ? $("criteriaSelect").value : "";
+    const score = $("scoreSelect") ? $("scoreSelect").value : "";
+    const note = $("noteInput") ? $("noteInput").value.trim() : "";
+    const date = $("scoreDate") ? $("scoreDate").value : "";
+
+    if (!employeeName) {
+      alert("Calisan sec.");
+      return;
+    }
+
+    if (!criteria) {
+      alert("Kriter sec.");
+      return;
+    }
+
+    if (!score) {
+      alert("Puan sec.");
+      return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = "Kaydediliyor...";
+
+    try {
+      const response = await callApi("saverecord", {
+        employeeName,
+        criteria,
+        score,
+        note,
+        date
+      });
+
+      APP.data = response.data || APP.data;
+      renderAll();
+
+      if ($("noteInput")) $("noteInput").value = "";
+      if ($("scoreSelect")) $("scoreSelect").value = "";
+      if ($("criteriaSelect")) $("criteriaSelect").value = "";
+      if ($("employeeSelect")) $("employeeSelect").value = "";
+
+      alert("Kayit basarili.");
+      switchTab("reports");
+    } catch (err) {
+      alert("Kaydetme hatasi: " + err.message);
+    } finally {
+      const currentUser = APP.data && APP.data.currentUser ? APP.data.currentUser : getFallbackCurrentUser();
+      btn.disabled = !currentUser.canScore;
+      btn.textContent = currentUser.canScore ? "Kaydet" : "Yetki yok";
+    }
+  });
+}
+
+document.addEventListener("DOMContentLoaded", async () => {
   setupTabs();
   setToday();
-  initTelegramInfo();
-  setupSaveButton();
+  bindSaveButton();
   await loadBootstrap();
 });
